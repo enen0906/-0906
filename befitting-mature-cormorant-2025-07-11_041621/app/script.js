@@ -220,10 +220,10 @@ if (rand < 4 / 303) {
 }
 
 const images = {
-    '天選獎S1': 'https://cdn.glitch.global/2a1c8350-161e-4312-b5b2-427eb0cf6bab/s1.png?v=1751949508542',
-    '天選獎S2': 'https://cdn.glitch.global/2a1c8350-161e-4312-b5b2-427eb0cf6bab/s2.png?v=1751949514304',
-    '機會獎': 'https://cdn.glitch.global/2a1c8350-161e-4312-b5b2-427eb0cf6bab/a.png?v=1751447264673',
-    '命運獎': 'https://cdn.glitch.global/2a1c8350-161e-4312-b5b2-427eb0cf6bab/b.png?v=1751447264672'
+    '天選獎S1': 'https://drive.google.com/uc?export=view&id=13gDiJBbthbncHvjScXPxlMNMSVPizqXA',
+    '天選獎S2': 'https://drive.google.com/uc?export=view&id=19_mfvE6Nd31BGi6owGu1OnRcJUWvMViI',
+    '機會獎': 'https://drive.google.com/uc?export=view&id=1vjC8fHwpqcGM-7Qxu2rpLEUP0g-etYDX',
+    '命運獎': 'https://drive.google.com/uc?export=view&id=1p5rG4M9UbxPgMCIJ7DtEhPsL6_6DnS62'
 };
 // 載入圖片
 let img = new Image();

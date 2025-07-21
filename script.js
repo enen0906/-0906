@@ -220,10 +220,10 @@ if (rand < 4 / 303) {
 }
 
 const images = {
-    '天選獎S1': 'https://pixhost.to/show/7372/624427061_-4.png',
-    '天選獎S2': 'https://pixhost.to/show/7372/624427205_-5.png',
-    '機會獎': 'https://pixhost.to/show/7372/624426364_-2.png',
-    '命運獎': 'https://pixhost.to/show/7372/624426745_-3.png'
+    '天選獎S1': 'https://github.com/enen0906/-0906/issues/1#issue-3247711399',
+    '天選獎S2': 'https://github.com/enen0906/-0906/issues/2#issue-3247716817',
+    '機會獎': 'https://github.com/enen0906/-0906/issues/3#issue-3247718514',
+    '命運獎': 'https://github.com/enen0906/-0906/issues/4#issue-3247719995'
 };
 // 載入圖片
 let img = new Image();

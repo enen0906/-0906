@@ -220,10 +220,10 @@ if (rand < 4 / 303) {
 }
 
 const images = {
-    '天選獎S1': 'https://drive.google.com/uc?export=view&id=13gDiJBbthbncHvjScXPxlMNMSVPizqXA',
-    '天選獎S2': 'https://drive.google.com/uc?export=view&id=19_mfvE6Nd31BGi6owGu1OnRcJUWvMViI',
-    '機會獎': 'https://drive.google.com/uc?export=view&id=1vjC8fHwpqcGM-7Qxu2rpLEUP0g-etYDX',
-    '命運獎': 'https://drive.google.com/uc?export=view&id=1p5rG4M9UbxPgMCIJ7DtEhPsL6_6DnS62'
+    '天選獎S1': 'https://pixhost.to/show/7372/624427061_-4.png',
+    '天選獎S2': 'https://pixhost.to/show/7372/624427205_-5.png',
+    '機會獎': 'https://pixhost.to/show/7372/624426364_-2.png',
+    '命運獎': 'https://pixhost.to/show/7372/624426745_-3.png'
 };
 // 載入圖片
 let img = new Image();

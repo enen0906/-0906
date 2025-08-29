@@ -1,3 +1,4 @@
+<script>
 const LIFF_ID = '2007597530-o1xaVbZm';
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbyWymklcU5nnpdPXMTi5CKX859HjgPeP7mHvlgrUmFiY2W_VzK6nbLPVfXA1PjKhbsX/exec';
 
@@ -13,9 +14,8 @@ let deviceModel = '未知';
 let userId = '未知';
 let hasSentData = false;
 
-// 型號對照表，全部大寫 Key
+// 型號對照表
 const modelMap = {
-  // Galaxy S 系列
   "SM-G9800": "Galaxy S20",
   "SM-G9860": "Galaxy S20+",
   "SM-G9880": "Galaxy S20 Ultra",
@@ -34,8 +34,6 @@ const modelMap = {
   "SM-S9310": "Galaxy S25",
   "SM-S9360": "Galaxy S25+",
   "SM-S9380": "Galaxy S25 Ultra",
-
-  // Galaxy Z 系列
   "SM-F7000": "Galaxy Z Flip",
   "SM-F9160": "Galaxy Z Fold2",
   "SM-F7110": "Galaxy Z Flip3",
@@ -46,8 +44,6 @@ const modelMap = {
   "SM-F9460": "Galaxy Z Fold5",
   "SM-F7410": "Galaxy Z Flip6",
   "SM-F9560": "Galaxy Z Fold6",
-
-  // Galaxy A 系列
   "SM-A5150": "Galaxy A51",
   "SM-A7150": "Galaxy A71",
   "SM-A3250": "Galaxy A32",
@@ -67,8 +63,6 @@ const modelMap = {
   "SM-A3560": "Galaxy A35 5G",
   "SM-A5560": "Galaxy A55 5G",
   "SM-A1660": "Galaxy A16",
-
-  // 已有的機種
   "iPhone": "Apple iPhone（型號未知）",
   "Pixel 7": "Google Pixel 7",
   "Pixel 7 Pro": "Google Pixel 7 Pro",
@@ -96,7 +90,6 @@ const modelMap = {
   "RMX3820": "realme 11 Pro+",
   "RMX3866": "realme GT Neo5"
 };
-
 
 function guessModelName(rawModel) {
   if (!rawModel) return rawModel || "未知機型";
@@ -130,30 +123,24 @@ function detectBrand(modelCode) {
   return "Android";
 }
 
-// 修正後的 Android 型號抓取，排除 wv
 function getAndroidModel(ua) {
   const regex = /android.*;\s([^;]+)\sbuild/i;
   let match = ua.match(regex);
   if (match && match[1]) {
     let model = match[1].trim();
-    if (model.toLowerCase() === 'wv') {
-      return "Android裝置";
-    }
+    if (model.toLowerCase() === 'wv') return "Android裝置";
     return model;
   }
   const regex2 = /android.*;\s([^;]+)\)/i;
   match = ua.match(regex2);
   if (match && match[1]) {
     let model = match[1].trim();
-    if (model.toLowerCase() === 'wv') {
-      return "Android裝置";
-    }
+    if (model.toLowerCase() === 'wv') return "Android裝置";
     return model;
   }
   return "Android裝置";
 }
 
-// 初始化 LIFF 並取得 userId
 async function initLiff() {
   await liff.init({ liffId: LIFF_ID });
   if (!liff.isLoggedIn()) {
@@ -169,7 +156,6 @@ async function initLiff() {
   }
 }
 
-// 取得裝置品牌與型號
 function getDeviceInfo() {
   const ua = navigator.userAgent.toLowerCase();
   if (ua.includes('iphone')) {
@@ -189,7 +175,7 @@ function getDeviceInfo() {
   }
 }
 
-// 送資料到 Google Apps Script
+// 🚀 送資料到 Google Apps Script
 function sendData(prize) {
   if (hasSentData) return;
   hasSentData = true;
@@ -204,8 +190,33 @@ function sendData(prize) {
 
   fetch(`${GAS_URL}?${params.toString()}`)
     .then(res => res.text())
-    .then(data => console.log('資料已送出', data))
-    .catch(err => console.error('送出失敗', err));
+    .then(data => {
+      console.log("伺服器回應:", data);
+
+      if (data === "duplicate") {
+        resultDiv.innerHTML = `
+          <div class="prize">⚠️ 你已經參加過囉！</div>
+          <div class="notice" style="color:#d60000; font-weight:bold; font-size:50px;">請勿重複抽獎</div>
+        `;
+        resultDiv.style.display = 'block';
+        maskCanvas.style.pointerEvents = 'none';
+      } else if (data === "success") {
+        console.log('✅ 抽獎紀錄成功寫入');
+      } else {
+        resultDiv.innerHTML = `
+          <div class="prize">🎉 恭喜你中了【${data}】 🎉</div>
+          <div class="notice" style="color:#d60000; font-weight:bold; font-size:70px;">請洽服務人員兌獎</div>
+        `;
+        resultDiv.style.display = 'block';
+      }
+    })
+    .catch(err => {
+      console.error('❌ 送出失敗', err);
+      resultDiv.innerHTML = `
+        <div class="prize">⚠️ 系統錯誤，請稍後再試</div>
+      `;
+      resultDiv.style.display = 'block';
+    });
 }
 
 // 抽獎機率設定
@@ -225,12 +236,11 @@ const images = {
     '機會獎': 'https://i.postimg.cc/3xpwfNG1/3.png',
     '命運獎': 'https://i.postimg.cc/RFCV0TDp/2.png'
 };
-// 載入圖片
+
 let img = new Image();
 img.crossOrigin = 'anonymous';
 img.src = images[prize];
 
-// 畫布大小設定
 function setCanvasSize() {
   const width = wrapper.clientWidth;
   const height = Math.floor(width * 1350 / 1080);
@@ -239,29 +249,27 @@ function setCanvasSize() {
   bgCanvas.height = maskCanvas.height = height;
 }
 
-// 初始化遮罩
 function initMask() {
   maskCtx.fillStyle = '#999';
   maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
 }
 
-// 檢查刮開比例
 function checkScratchPercent() {
-    const imgData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height).data;
-    let cleared = 0;
-    for (let i = 3; i < imgData.length; i += 4) {
-        if (imgData[i] === 0) cleared++;
-    }
-    const percent = cleared / (maskCanvas.width * maskCanvas.height) * 100;
-    if (percent > 50) {
-        resultDiv.innerHTML = `
-            <div class="prize">🎉 恭喜你中了【${prize}】 🎉</div>
-            <div class="notice" style="color:#d60000; font-weight:bold; font-size:70px;">請洽服務人員兌獎</div>
-        `;
-        resultDiv.style.display = 'block';
-        maskCanvas.style.pointerEvents = 'none';
-        sendData(prize);
-    }
+  const imgData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height).data;
+  let cleared = 0;
+  for (let i = 3; i < imgData.length; i += 4) {
+    if (imgData[i] === 0) cleared++;
+  }
+  const percent = cleared / (maskCanvas.width * maskCanvas.height) * 100;
+  if (percent > 50) {
+    resultDiv.innerHTML = `
+      <div class="prize">🎉 恭喜你中了【${prize}】 🎉</div>
+      <div class="notice" style="color:#d60000; font-weight:bold; font-size:70px;">請洽服務人員兌獎</div>
+    `;
+    resultDiv.style.display = 'block';
+    maskCanvas.style.pointerEvents = 'none';
+    sendData(prize);
+  }
 }
 
 let isDrawing = false;
@@ -269,15 +277,9 @@ let isDrawing = false;
 function getPos(e) {
   const rect = maskCanvas.getBoundingClientRect();
   if (e.touches && e.touches.length > 0) {
-    return {
-      x: e.touches[0].clientX - rect.left,
-      y: e.touches[0].clientY - rect.top
-    };
+    return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
   } else {
-    return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    };
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
 }
 
@@ -291,28 +293,14 @@ function scratch(e) {
   maskCtx.fill();
 }
 
-maskCanvas.addEventListener('mousedown', (e) => {
-  isDrawing = true;
-  scratch(e);
-});
+maskCanvas.addEventListener('mousedown', (e) => { isDrawing = true; scratch(e); });
 maskCanvas.addEventListener('mousemove', scratch);
-maskCanvas.addEventListener('mouseup', () => {
-  isDrawing = false;
-  checkScratchPercent();
-});
-maskCanvas.addEventListener('mouseleave', () => {
-  isDrawing = false;
-});
+maskCanvas.addEventListener('mouseup', () => { isDrawing = false; checkScratchPercent(); });
+maskCanvas.addEventListener('mouseleave', () => { isDrawing = false; });
 
-maskCanvas.addEventListener('touchstart', (e) => {
-  isDrawing = true;
-  scratch(e);
-}, { passive: false });
+maskCanvas.addEventListener('touchstart', (e) => { isDrawing = true; scratch(e); }, { passive: false });
 maskCanvas.addEventListener('touchmove', scratch, { passive: false });
-maskCanvas.addEventListener('touchend', () => {
-  isDrawing = false;
-  checkScratchPercent();
-});
+maskCanvas.addEventListener('touchend', () => { isDrawing = false; checkScratchPercent(); });
 
 img.onload = () => {
   setCanvasSize();
@@ -326,3 +314,4 @@ window.addEventListener('resize', () => {
   bgCtx.drawImage(img, 0, 0, bgCanvas.width, bgCanvas.height);
   initMask();
 });
+</script>

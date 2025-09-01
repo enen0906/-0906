@@ -22,7 +22,6 @@ h1 {
   border: 2px solid #333;
 }
 
-/* 背景與遮罩畫布 */
 #wrapper canvas {
   position: absolute;
   top: 0;
@@ -33,19 +32,26 @@ h1 {
   z-index: 1;
 }
 
-/* 結果訊息，放在畫布下方，文字置中 */
+/* 結果訊息，畫布下方 */
 #result {
   display: none;           /* 預設隱藏 */
   margin: 20px auto 0;     /* 與畫布間距，上方20px */
   text-align: center;      /* 文字置中 */
-  max-width: 800px;        /* 與畫布同寬 */
+  max-width: 800px;
+}
+
+#result .prize,
+#result .notice {
+  display: block; /* 確保換行 */
+  width: 100%;
+  line-height: 1.2;
 }
 
 #result .prize {
   font-size: 64px;
   font-weight: 700;
   color: #ff4500;
-  line-height: 1.2;
+  margin-bottom: 10px;
 }
 
 #result .notice {

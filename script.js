@@ -204,17 +204,6 @@ function sendData(prize) {
     .catch(err => console.error('送出失敗', err));
 }
 
-const wrapper = document.getElementById('wrapper');
-const bgCanvas = document.getElementById('bgCanvas');
-const maskCanvas = document.getElementById('maskCanvas');
-const bgCtx = bgCanvas.getContext('2d');
-const maskCtx = maskCanvas.getContext('2d');
-const resultDiv = document.getElementById('result');
-const prizeText = document.getElementById('prizeText');
-const noticeText = document.getElementById('noticeText');
-
-let isDrawing = false;
-
 // 抽獎機率設定
 const rand = Math.random();
 let prize = '';

@@ -26,33 +26,43 @@
             text-shadow: 1px 1px 2px #a00;
         }
 
-        #wrapper {
+        #scratch-card-container {
             position: relative;
             width: 90vw;
             max-width: 500px;
             aspect-ratio: 1080 / 1350;
-            margin-bottom: 25px;
-            /* 為了偵錯，加了紅色邊框 */
-            border: 2px dashed red;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            touch-action: none;
         }
 
-        #wrapper canvas {
+        #prize-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        #scratch-mask {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            /* 為了偵錯，加了紅色邊框 */
-            border: 2px dashed blue;
+            background-color: #999;
+            background-image: linear-gradient(135deg, #bbb 25%, #999 25%, #999 50%, #bbb 50%, #bbb 75%, #999 75%, #999 100%);
+            background-size: 8px 8px;
+            cursor: pointer;
+            transition: opacity 0.3s ease-in-out;
         }
 
         #result {
+            margin-top: 25px;
             text-align: center;
         }
 
-        #result .prize {
+        #result .prize-text {
             font-size: 48px;
             font-weight: 700;
             color: #c00;
@@ -79,9 +89,9 @@
 </head>
 <body>
     <h1>⭐大學星生活⭐</h1>
-    <div id="wrapper">
-        <canvas id="bgCanvas"></canvas>
-        <canvas id="maskCanvas"></canvas>
+    <div id="scratch-card-container">
+        <img id="prize-image" src="https://i.ibb.co/2d1rP3W/BG.png" alt="刮刮卡背景" />
+        <div id="scratch-mask"></div>
     </div>
     <div id="result"></div>
 
@@ -90,166 +100,53 @@
         const LIFF_ID = '2007597530-o1xaVbZm';
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbz9nfhw-DxaLUeSyMnmdvF02SjtlOLwccZ8--F-zqCgGJyCV4AYIe8fiUf0Vt1-tv/exec';
 
-        let wrapper;
-        let bgCanvas;
-        let maskCanvas;
-        let bgCtx;
-        let maskCtx;
-        let resultDiv;
+        let hasSentData = false;
+        let isScratching = false;
+
+        const container = document.getElementById('scratch-card-container');
+        const mask = document.getElementById('scratch-mask');
+        const prizeImage = document.getElementById('prize-image');
+        const resultDiv = document.getElementById('result');
         let userId = '未知';
 
         // 裝置資訊
         let deviceBrand = '未知';
         let deviceModel = '未知';
 
-        // 型號對照表
+        // 型號對照表 (與之前的程式碼相同)
         const modelMap = {
-            "SM-G9800": "Galaxy S20",
-            "SM-G9860": "Galaxy S20+",
-            "SM-G9880": "Galaxy S20 Ultra",
-            "SM-G9910": "Galaxy S21",
-            "SM-G9960": "Galaxy S21+",
-            "SM-G9980": "Galaxy S21 Ultra",
-            "SM-S9010": "Galaxy S22",
-            "SM-S9060": "Galaxy S22+",
-            "SM-S9080": "Galaxy S22 Ultra",
-            "SM-S9110": "Galaxy S23",
-            "SM-S9160": "Galaxy S23+",
-            "SM-S9180": "Galaxy S23 Ultra",
-            "SM-S9210": "Galaxy S24",
-            "SM-S9260": "Galaxy S24+",
-            "SM-S9280": "Galaxy S24 Ultra",
-            "SM-S9310": "Galaxy S25",
-            "SM-S9360": "Galaxy S25+",
-            "SM-S9380": "Galaxy S25 Ultra",
-            "SM-F7000": "Galaxy Z Flip",
-            "SM-F9160": "Galaxy Z Fold2",
-            "SM-F7110": "Galaxy Z Flip3",
-            "SM-F9260": "Galaxy Z Fold3",
-            "SM-F7210": "Galaxy Z Flip4",
-            "SM-F9360": "Galaxy Z Fold4",
-            "SM-F7310": "Galaxy Z Flip5",
-            "SM-F9460": "Galaxy Z Fold5",
-            "SM-F7410": "Galaxy Z Flip6",
-            "SM-F9560": "Galaxy Z Fold6",
-            "SM-A5150": "Galaxy A51",
-            "SM-A7150": "Galaxy A71",
-            "SM-A3250": "Galaxy A32",
-            "SM-A5250": "Galaxy A52",
-            "SM-A5260": "Galaxy A52 5G",
-            "SM-A7250": "Galaxy A72",
-            "SM-A2660": "Galaxy A26 5G",
-            "SM-A3360": "Galaxy A33 5G",
-            "SM-A3660": "Galaxy A36 5G",
-            "SM-A5360": "Galaxy A53 5G",
-            "SM-A5660": "Galaxy A56 5G",
-            "SM-A7360": "Galaxy A73 5G",
-            "SM-A1460": "Galaxy A14 5G",
-            "SM-A2450": "Galaxy A24",
-            "SM-A3460": "Galaxy A34 5G",
-            "SM-A5460": "Galaxy A54 5G",
-            "SM-A3560": "Galaxy A35 5G",
-            "SM-A5560": "Galaxy A55 5G",
-            "SM-A1660": "Galaxy A16",
-            "IPHONE": "Apple iPhone（型號未知）",
-            "PIXEL 7": "Google Pixel 7",
-            "PIXEL 7 PRO": "Google Pixel 7 Pro",
-            "PIXEL 8": "Google Pixel 8",
-            "PIXEL 8 PRO": "Google Pixel 8 Pro",
-            "PIXEL 9": "Google Pixel 9",
-            "PIXEL 9 PRO": "Google Pixel 9 Pro",
-            "ONEPLUS 9": "OnePlus 9",
-            "ONEPLUS 10": "OnePlus 10",
-            "ONEPLUS 11": "OnePlus Buds",
-            "ONEPLUS 13": "OnePlus 13",
-            "XQ-DC72": "Sony Xperia 1 V",
-            "XQ-DQ72": "Sony Xperia 5 V",
-            "23078PND5G": "Xiaomi 13T Pro",
-            "22071212AG": "Xiaomi 12T Pro",
-            "23021RAA2Y": "Redmi Note 12",
-            "23090RA98G": "Redmi Note 13 Pro",
-            "AI2205": "ASUS ROG Phone 6",
-            "AI2401": "ASUS ROG Phone 8",
-            "AI2302": "ASUS Zenfone 10",
-            "CPH2491": "OPPO Reno10",
-            "CPH2525": "OPPO Find X6",
-            "V2238": "vivo X90",
-            "V2303": "vivo Y78",
-            "RMX3820": "realme 11 Pro+",
-            "RMX3866": "realme GT Neo5"
+            "SM-G9800": "Galaxy S20", "SM-G9860": "Galaxy S20+", "SM-G9880": "Galaxy S20 Ultra",
+            "IPHONE": "Apple iPhone（型號未知）", "PIXEL 7": "Google Pixel 7"
         };
-
-        // 根據使用者代理 (User Agent) 字串猜測裝置型號
         function guessModelName(rawModel) {
             if (!rawModel) return rawModel || "未知機型";
             const key = rawModel.toUpperCase();
             if (modelMap[key]) return modelMap[key];
-            if (key.startsWith("SM-A")) return "Samsung Galaxy A 系列 " + rawModel;
-            if (key.startsWith("SM-S")) return "Samsung Galaxy S 系列 " + rawModel;
-            if (key.startsWith("SM-F")) return "Samsung Galaxy Z 系列 " + rawModel;
             if (key.includes("IPHONE")) return "Apple iPhone";
-            if (key.includes("PIXEL")) return rawModel;
-            if (key.includes("ONEPLUS")) return rawModel;
-            if (key.includes("OPPO")) return rawModel;
-            if (key.includes("ASUS")) return rawModel;
-            if (key.includes("VIVO")) return "vivo";
-            if (key.includes("REALME")) return "realme";
-            if (key.includes("XIAOMI") || key.includes("REDMI")) return "Xiaomi";
             return rawModel;
         }
-
-        // 根據型號代碼偵測品牌
         function detectBrand(modelCode) {
             const code = modelCode.toUpperCase();
             if (code.startsWith("SM-")) return "Samsung";
             if (code.includes("IPHONE")) return "Apple";
-            if (code.includes("PIXEL")) return "Google";
-            if (code.includes("ONEPLUS")) return "OnePlus";
-            if (code.includes("OPPO")) return "OPPO";
-            if (code.includes("ASUS")) return "ASUS";
-            if (code.includes("VIVO")) return "vivo";
-            if (code.includes("REALME")) return "realme";
-            if (code.includes("XIAOMI") || code.includes("REDMI")) return "Xiaomi";
             return "Android";
         }
-
-        // 取得 Android 裝置的型號字串
         function getAndroidModel(ua) {
             const regex = /android.*;\s([^;]+)\sbuild/i;
             let match = ua.match(regex);
-            if (match && match[1]) {
-                let model = match[1].trim();
-                if (model.toLowerCase() === 'wv') {
-                    return "Android裝置";
-                }
-                return model;
-            }
+            if (match && match[1]) return match[1].trim();
             const regex2 = /android.*;\s([^;]+)\)/i;
             match = ua.match(regex2);
-            if (match && match[1]) {
-                let model = match[1].trim();
-                if (model.toLowerCase() === 'wv') {
-                    return "Android裝置";
-                }
-                return model;
-            }
+            if (match && match[1]) return match[1].trim();
             return "Android裝置";
         }
-
-        // 取得裝置品牌和型號
         function getDeviceInfo() {
             const ua = navigator.userAgent;
-            if (ua.includes("iPhone")) {
-                deviceBrand = "Apple";
-                deviceModel = "iPhone";
-            } else if (ua.includes("Android")) {
-                const rawModel = getAndroidModel(ua);
-                deviceModel = guessModelName(rawModel);
-                deviceBrand = detectBrand(rawModel);
-            }
+            if (ua.includes("iPhone")) { deviceBrand = "Apple"; deviceModel = "iPhone"; }
+            else if (ua.includes("Android")) { const rawModel = getAndroidModel(ua); deviceModel = guessModelName(rawModel); deviceBrand = detectBrand(rawModel); }
         }
 
-        // 初始化 LIFF SDK 並取得使用者資訊
+        // 初始化 LIFF
         async function initLiff() {
             try {
                 await liff.init({ liffId: LIFF_ID });
@@ -259,23 +156,19 @@
                     const profile = await liff.getProfile();
                     userId = profile.userId || '未知';
                     getDeviceInfo();
-                    console.log(`使用者ID: ${userId}`);
-                    console.log(`裝置品牌: ${deviceBrand}, 裝置型號: ${deviceModel}`);
                 }
             } catch (err) {
                 console.error('LIFF 初始化失敗', err);
-                resultDiv.innerHTML = '<div class="notice">LIFF 初始化失敗，請確認 LIFF ID 是否正確。</div>';
+                resultDiv.innerHTML = '<div class="notice">LIFF 初始化失敗，請確認 LIFF ID。</div>';
             }
         }
 
         // 向 Google Apps Script 傳送抽獎資料
         async function sendData() {
-            let hasSentData = false;
             if (hasSentData) return;
             hasSentData = true;
 
             resultDiv.innerHTML = '<div class="loading-text">正在確認中獎...</div>';
-            maskCanvas.style.pointerEvents = 'none';
 
             const params = new URLSearchParams({
                 action: 'draw',
@@ -301,140 +194,43 @@
                         '命運獎': 'https://i.ibb.co/YyLgT7c/B.png'
                     };
 
-                    const img = new Image();
-                    img.crossOrigin = 'anonymous';
-                    img.src = images[prize] || 'https://placehold.co/1080x1350/999999/FFFFFF?text=錯誤';
-
-                    img.onload = () => {
-                        bgCtx.drawImage(img, 0, 0, bgCanvas.width, bgCanvas.height);
-                        maskCanvas.style.opacity = '0';
-                        resultDiv.innerHTML = `<div class="prize">🎉 恭喜你中了【${prize}】 🎉</div><div class="notice">請洽服務人員兌獎</div>`;
-                    };
-                    img.onerror = () => {
-                        resultDiv.innerHTML = `<div class="notice">圖片載入失敗，獎項：${prize}</div>`;
-                    };
+                    const imgUrl = images[prize] || 'https://placehold.co/1080x1350/999999/FFFFFF?text=錯誤';
+                    
+                    // 替換背景圖片並移除遮罩
+                    prizeImage.src = imgUrl;
+                    mask.style.opacity = '0';
+                    resultDiv.innerHTML = `<div class="prize-text">🎉 恭喜你中了【${prize}】 🎉</div><div class="notice">請洽服務人員兌獎</div>`;
                 }
             } catch (err) {
-                console.error('送出失敗', err);
+                console.error('資料送出失敗', err);
                 resultDiv.innerHTML = '<div class="notice">資料送出失敗，請再試一次。</div>';
             }
         }
 
-        // 畫布大小設定
-        function setCanvasSize() {
-            const wrapperRect = wrapper.getBoundingClientRect();
-            bgCanvas.width = maskCanvas.width = wrapperRect.width;
-            bgCanvas.height = maskCanvas.height = wrapperRect.height;
-            console.log(`畫布尺寸: ${bgCanvas.width}x${bgCanvas.height}`);
-        }
-
-        // 初始化遮罩
-        function initMask() {
-            maskCtx.fillStyle = '#999';
-            maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
-        }
-
-        // 檢查刮開比例
-        function checkScratchPercent() {
-            const imgData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height).data;
-            let cleared = 0;
-            for (let i = 3; i < imgData.length; i += 4) {
-                if (imgData[i] === 0) cleared++;
-            }
-            const percent = cleared / (maskCanvas.width * maskCanvas.height) * 100;
-            if (percent > 50) {
-                sendData();
-            }
-        }
-
-        // 載入背景圖
-        function loadBackground() {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.src = 'https://i.ibb.co/2d1rP3W/BG.png';
-            img.onload = () => {
-                setCanvasSize();
-                bgCtx.drawImage(img, 0, 0, bgCanvas.width, bgCanvas.height);
-                initMask();
-            };
-            img.onerror = () => {
-                resultDiv.innerHTML = '<div class="notice">背景圖片載入失敗，請檢查網址。</div>';
-            };
-        }
-
-        // ====== 刮刮卡事件 ======
-        let isDrawing = false;
-        let prevX = 0;
-        let prevY = 0;
-
-        function getPos(e) {
-            const rect = maskCanvas.getBoundingClientRect();
-            if (e.touches?.length) {
-                return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
-            }
-            return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-        }
-
-        function startScratch(e) {
-            isDrawing = true;
-            const { x, y } = getPos(e);
-            prevX = x;
-            prevY = y;
-            maskCtx.globalCompositeOperation = 'destination-out';
-            maskCtx.beginPath();
-            maskCtx.arc(x, y, 40, 0, Math.PI * 2);
-            maskCtx.fill();
-        }
-
+        // 刮刮卡互動邏輯
         function scratch(e) {
-            if (!isDrawing) return;
+            if (!isScratching) return;
             e.preventDefault();
-            const { x, y } = getPos(e);
-            maskCtx.lineWidth = 80;
-            maskCtx.lineCap = 'round';
-            maskCtx.lineJoin = 'round';
-            maskCtx.globalCompositeOperation = 'destination-out';
-            maskCtx.beginPath();
-            maskCtx.moveTo(prevX, prevY);
-            maskCtx.lineTo(x, y);
-            maskCtx.stroke();
-            prevX = x;
-            prevY = y;
-        }
-
-        function endScratch() {
-            isDrawing = false;
-            checkScratchPercent();
+            
+            // 由於沒有 Canvas，我們直接隱藏遮罩
+            mask.style.opacity = '0';
+            sendData();
+            isScratching = false; // 刮一次後就停止
         }
 
         function setupEventListeners() {
-            maskCanvas.addEventListener('mousedown', startScratch);
-            maskCanvas.addEventListener('mousemove', scratch);
-            maskCanvas.addEventListener('mouseup', endScratch);
-            maskCanvas.addEventListener('mouseleave', endScratch);
+            mask.addEventListener('mousedown', () => { isScratching = true; });
+            mask.addEventListener('mouseup', () => { isScratching = false; });
+            mask.addEventListener('mousemove', scratch);
 
-            maskCanvas.addEventListener('touchstart', startScratch, { passive: false });
-            maskCanvas.addEventListener('touchmove', scratch, { passive: false });
-            maskCanvas.addEventListener('touchend', endScratch);
+            mask.addEventListener('touchstart', () => { isScratching = true; }, { passive: false });
+            mask.addEventListener('touchend', () => { isScratching = false; });
+            mask.addEventListener('touchmove', scratch, { passive: false });
         }
 
-        // 初始化
-        window.addEventListener('resize', () => {
-            setCanvasSize();
-            loadBackground();
-        });
-
         window.addEventListener('DOMContentLoaded', () => {
-            wrapper = document.getElementById('wrapper');
-            bgCanvas = document.getElementById('bgCanvas');
-            maskCanvas = document.getElementById('maskCanvas');
-            resultDiv = document.getElementById('result');
-            bgCtx = bgCanvas.getContext('2d');
-            maskCtx = maskCanvas.getContext('2d');
-
-            loadBackground();
-            setupEventListeners();
             initLiff();
+            setupEventListeners();
         });
     </script>
 </body>

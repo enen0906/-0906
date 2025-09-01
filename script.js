@@ -152,8 +152,6 @@ function getAndroidModel(ua) {
   }
   return "Android裝置";
 }
-
-// 初始化 LIFF 並取得 userId
 async function initLiff() {
   await liff.init({ liffId: LIFF_ID });
   if (!liff.isLoggedIn()) {
@@ -169,7 +167,6 @@ async function initLiff() {
   }
 }
 
-// 取得裝置品牌與型號
 function getDeviceInfo() {
   const ua = navigator.userAgent.toLowerCase();
   if (ua.includes('iphone')) {
@@ -189,7 +186,6 @@ function getDeviceInfo() {
   }
 }
 
-// 送資料到 Google Apps Script
 function sendData(prize) {
   if (hasSentData) return;
   hasSentData = true;
@@ -225,12 +221,11 @@ const images = {
     '機會獎': 'https://i.postimg.cc/3xpwfNG1/3.png',
     '命運獎': 'https://i.postimg.cc/RFCV0TDp/2.png'
 };
-// 載入圖片
+
 let img = new Image();
 img.crossOrigin = 'anonymous';
 img.src = images[prize];
 
-// 畫布大小設定
 function setCanvasSize() {
   const width = wrapper.clientWidth;
   const height = Math.floor(width * 1350 / 1080);
@@ -239,45 +234,38 @@ function setCanvasSize() {
   bgCanvas.height = maskCanvas.height = height;
 }
 
-// 初始化遮罩
 function initMask() {
   maskCtx.fillStyle = '#999';
   maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
 }
 
-// 檢查刮開比例
 function checkScratchPercent() {
-    const imgData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height).data;
-    let cleared = 0;
-    for (let i = 3; i < imgData.length; i += 4) {
-        if (imgData[i] === 0) cleared++;
-    }
-    const percent = cleared / (maskCanvas.width * maskCanvas.height) * 100;
-    if (percent > 50) {
-        resultDiv.innerHTML = `
-            <div class="prize">🎉 恭喜你中了【${prize}】 🎉</div>
-            <div class="notice" style="color:#d60000; font-weight:bold; font-size:70px;">請洽服務人員兌獎</div>
-        `;
-        resultDiv.style.display = 'block';
-        maskCanvas.style.pointerEvents = 'none';
-        sendData(prize);
-    }
+  const imgData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height).data;
+  let cleared = 0;
+  for (let i = 3; i < imgData.length; i += 4) {
+    if (imgData[i] === 0) cleared++;
+  }
+  const percent = cleared / (imgData.length / 4) * 100;
+  if (percent > 50 && !hasSentData) {
+    resultDiv.innerHTML = `
+      <div class="prize">🎉 恭喜你中了【${prize}】 🎉</div>
+      <div class="notice" style="color:#d60000; font-weight:bold; font-size:70px;">請洽服務人員兌獎</div>
+    `;
+    resultDiv.style.display = 'block';
+    maskCanvas.style.pointerEvents = 'none';
+    sendData(prize);
+  }
 }
 
 let isDrawing = false;
+let lastPos = null;
 
 function getPos(e) {
   const rect = maskCanvas.getBoundingClientRect();
   if (e.touches && e.touches.length > 0) {
-    return {
-      x: e.touches[0].clientX - rect.left,
-      y: e.touches[0].clientY - rect.top
-    };
+    return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
   } else {
-    return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    };
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
 }
 
@@ -285,10 +273,25 @@ function scratch(e) {
   if (!isDrawing) return;
   e.preventDefault();
   const { x, y } = getPos(e);
+
   maskCtx.globalCompositeOperation = 'destination-out';
-  maskCtx.beginPath();
-  maskCtx.arc(x, y, 50, 0, Math.PI * 2);
-  maskCtx.fill();
+  maskCtx.lineCap = 'round';
+  maskCtx.lineJoin = 'round';
+  maskCtx.lineWidth = 100;
+
+  if (!lastPos) {
+    maskCtx.beginPath();
+    maskCtx.moveTo(x, y);
+    maskCtx.lineTo(x, y);
+    maskCtx.stroke();
+  } else {
+    maskCtx.beginPath();
+    maskCtx.moveTo(lastPos.x, lastPos.y);
+    maskCtx.lineTo(x, y);
+    maskCtx.stroke();
+  }
+
+  lastPos = { x, y };
 }
 
 maskCanvas.addEventListener('mousedown', (e) => {
@@ -298,10 +301,12 @@ maskCanvas.addEventListener('mousedown', (e) => {
 maskCanvas.addEventListener('mousemove', scratch);
 maskCanvas.addEventListener('mouseup', () => {
   isDrawing = false;
+  lastPos = null;
   checkScratchPercent();
 });
 maskCanvas.addEventListener('mouseleave', () => {
   isDrawing = false;
+  lastPos = null;
 });
 
 maskCanvas.addEventListener('touchstart', (e) => {
@@ -311,6 +316,7 @@ maskCanvas.addEventListener('touchstart', (e) => {
 maskCanvas.addEventListener('touchmove', scratch, { passive: false });
 maskCanvas.addEventListener('touchend', () => {
   isDrawing = false;
+  lastPos = null;
   checkScratchPercent();
 });
 

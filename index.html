@@ -107,6 +107,8 @@
         let deviceModel = '未知';
         let userId = '未知';
         let hasSentData = false;
+        let lastX = 0;
+        let lastY = 0;
 
         // 型號對照表
         const modelMap = {
@@ -197,7 +199,7 @@
             if (key.includes("ONEPLUS")) return rawModel;
             if (key.includes("OPPO")) return rawModel;
             if (key.includes("ASUS")) return rawModel;
-            if (key.includes("VIVO")) return rawModel;
+            if (key.includes("VIVO")) return "vivo";
             if (key.includes("REALME")) return "realme";
             if (key.includes("XIAOMI") || key.includes("REDMI")) return "Xiaomi";
             return rawModel;
@@ -364,6 +366,8 @@
 
         // ====== 刮刮卡事件 ======
         let isDrawing = false;
+        let prevX = 0;
+        let prevY = 0;
 
         function getPos(e) {
             const rect = maskCanvas.getBoundingClientRect();
@@ -373,25 +377,47 @@
             return { x: e.clientX - rect.left, y: e.clientY - rect.top };
         }
 
-        function scratch(e) {
-            if (!isDrawing) return;
-            e.preventDefault();
+        function startScratch(e) {
+            isDrawing = true;
             const { x, y } = getPos(e);
+            prevX = x;
+            prevY = y;
             maskCtx.globalCompositeOperation = 'destination-out';
             maskCtx.beginPath();
             maskCtx.arc(x, y, 40, 0, Math.PI * 2);
             maskCtx.fill();
         }
 
-        function setupEventListeners() {
-            maskCanvas.addEventListener('mousedown', e => { isDrawing = true; scratch(e); });
-            maskCanvas.addEventListener('mousemove', scratch);
-            maskCanvas.addEventListener('mouseup', () => { isDrawing = false; checkScratchPercent(); });
-            maskCanvas.addEventListener('mouseleave', () => { isDrawing = false; });
+        function scratch(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const { x, y } = getPos(e);
+            maskCtx.lineWidth = 80; // 刮除線條的粗度
+            maskCtx.lineCap = 'round';
+            maskCtx.lineJoin = 'round';
+            maskCtx.globalCompositeOperation = 'destination-out';
+            maskCtx.beginPath();
+            maskCtx.moveTo(prevX, prevY);
+            maskCtx.lineTo(x, y);
+            maskCtx.stroke();
+            prevX = x;
+            prevY = y;
+        }
 
-            maskCanvas.addEventListener('touchstart', e => { isDrawing = true; scratch(e); }, { passive: false });
+        function endScratch() {
+            isDrawing = false;
+            checkScratchPercent();
+        }
+
+        function setupEventListeners() {
+            maskCanvas.addEventListener('mousedown', startScratch);
+            maskCanvas.addEventListener('mousemove', scratch);
+            maskCanvas.addEventListener('mouseup', endScratch);
+            maskCanvas.addEventListener('mouseleave', endScratch);
+
+            maskCanvas.addEventListener('touchstart', startScratch, { passive: false });
             maskCanvas.addEventListener('touchmove', scratch, { passive: false });
-            maskCanvas.addEventListener('touchend', () => { isDrawing = false; checkScratchPercent(); });
+            maskCanvas.addEventListener('touchend', endScratch);
         }
         
         // 初始化

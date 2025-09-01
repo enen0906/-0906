@@ -34,7 +34,6 @@
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            touch-action: none;
         }
 
         #prize-image {
@@ -50,11 +49,18 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: #999;
+            background: #999;
             background-image: linear-gradient(135deg, #bbb 25%, #999 25%, #999 50%, #bbb 50%, #bbb 75%, #999 75%, #999 100%);
             background-size: 8px 8px;
             cursor: pointer;
             transition: opacity 0.3s ease-in-out;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2em;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            font-weight: bold;
         }
 
         #result {
@@ -91,7 +97,7 @@
     <h1>⭐大學星生活⭐</h1>
     <div id="scratch-card-container">
         <img id="prize-image" src="https://i.ibb.co/2d1rP3W/BG.png" alt="刮刮卡背景" />
-        <div id="scratch-mask"></div>
+        <div id="scratch-mask">點我刮開</div>
     </div>
     <div id="result"></div>
 
@@ -169,6 +175,7 @@
             hasSentData = true;
 
             resultDiv.innerHTML = '<div class="loading-text">正在確認中獎...</div>';
+            mask.textContent = '中獎確認中...';
 
             const params = new URLSearchParams({
                 action: 'draw',
@@ -185,6 +192,10 @@
 
                 if (data.hasDrawn) {
                     resultDiv.innerHTML = `<div class="notice">你已經刮過囉！</div>`;
+                    // 為了避免重複顯示，這裡可以選擇不替換圖片，或者用一個預設的「已刮過」圖片
+                    prizeImage.src = 'https://i.ibb.co/2d1rP3W/BG.png';
+                    mask.style.opacity = '0';
+                    mask.style.display = 'none';
                 } else {
                     const prize = data.prize;
                     const images = {
@@ -199,17 +210,21 @@
                     // 替換背景圖片並移除遮罩
                     prizeImage.src = imgUrl;
                     mask.style.opacity = '0';
+                    mask.style.display = 'none';
                     resultDiv.innerHTML = `<div class="prize-text">🎉 恭喜你中了【${prize}】 🎉</div><div class="notice">請洽服務人員兌獎</div>`;
                 }
             } catch (err) {
                 console.error('資料送出失敗', err);
                 resultDiv.innerHTML = '<div class="notice">資料送出失敗，請再試一次。</div>';
+                mask.style.opacity = '1';
+                mask.textContent = '點我刮開';
+                hasSentData = false;
             }
         }
 
         // 刮刮卡互動邏輯
         function scratch(e) {
-            if (!isScratching) return;
+            if (hasSentData) return;
             e.preventDefault();
             
             // 由於沒有 Canvas，我們直接隱藏遮罩

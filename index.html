@@ -96,12 +96,12 @@
         const LIFF_ID = '2007597530-o1xaVbZm';
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbz9nfhw-DxaLUeSyMnmdvF02SjtlOLwccZ8--bFr_zqCgGJyCV4AYIe8fiUf0Vt1-tv/exec';
 
-        const wrapper = document.getElementById('wrapper');
-        const bgCanvas = document.getElementById('bgCanvas');
-        const maskCanvas = document.getElementById('maskCanvas');
-        const bgCtx = bgCanvas.getContext('2d');
-        const maskCtx = maskCanvas.getContext('2d');
-        const resultDiv = document.getElementById('result');
+        let wrapper;
+        let bgCanvas;
+        let maskCanvas;
+        let bgCtx;
+        let maskCtx;
+        let resultDiv;
 
         let deviceBrand = '未知';
         let deviceModel = '未知';
@@ -199,7 +199,7 @@
             if (key.includes("ASUS")) return rawModel;
             if (key.includes("VIVO")) return rawModel;
             if (key.includes("REALME")) return rawModel;
-            if (key.includes("XIAOMI") || key.includes("REDMI")) return rawModel;
+            if (key.includes("XIAOMI") || key.includes("REDMI")) return "Xiaomi";
             return rawModel;
         }
 
@@ -259,7 +259,7 @@
                 } else {
                     const profile = await liff.getProfile();
                     userId = profile.userId || '未知';
-                    getDeviceInfo(); 
+                    getDeviceInfo();
                     console.log(`使用者ID: ${userId}`);
                     console.log(`裝置品牌: ${deviceBrand}, 裝置型號: ${deviceModel}`);
                 }
@@ -270,7 +270,7 @@
                 }
             }
         }
-        
+
         async function sendData() {
             if (hasSentData) return;
             hasSentData = true;
@@ -305,7 +305,7 @@
                     const img = new Image();
                     img.crossOrigin = 'anonymous';
                     img.src = images[prize] || 'https://placehold.co/1080x1350/999999/FFFFFF?text=錯誤';
-                    
+
                     img.onload = () => {
                         setCanvasSize();
                         bgCtx.drawImage(img, 0, 0, bgCanvas.width, bgCanvas.height);
@@ -346,7 +346,7 @@
                 sendData();
             }
         }
-        
+
         // 載入背景圖
         function loadBackground() {
             const img = new Image();
@@ -383,24 +383,34 @@
             maskCtx.fill();
         }
 
-        maskCanvas.addEventListener('mousedown', e => { isDrawing = true; scratch(e); });
-        maskCanvas.addEventListener('mousemove', scratch);
-        maskCanvas.addEventListener('mouseup', () => { isDrawing = false; checkScratchPercent(); });
-        maskCanvas.addEventListener('mouseleave', () => { isDrawing = false; });
+        function setupEventListeners() {
+            maskCanvas.addEventListener('mousedown', e => { isDrawing = true; scratch(e); });
+            maskCanvas.addEventListener('mousemove', scratch);
+            maskCanvas.addEventListener('mouseup', () => { isDrawing = false; checkScratchPercent(); });
+            maskCanvas.addEventListener('mouseleave', () => { isDrawing = false; });
 
-        maskCanvas.addEventListener('touchstart', e => { isDrawing = true; scratch(e); }, { passive: false });
-        maskCanvas.addEventListener('touchmove', scratch, { passive: false });
-        maskCanvas.addEventListener('touchend', () => { isDrawing = false; checkScratchPercent(); });
-
+            maskCanvas.addEventListener('touchstart', e => { isDrawing = true; scratch(e); }, { passive: false });
+            maskCanvas.addEventListener('touchmove', scratch, { passive: false });
+            maskCanvas.addEventListener('touchend', () => { isDrawing = false; checkScratchPercent(); });
+        }
+        
         // 初始化
         window.addEventListener('resize', () => {
             setCanvasSize();
             loadBackground(); // 畫面調整大小後重新載入背景
         });
-
+        
         window.onload = () => {
+            wrapper = document.getElementById('wrapper');
+            bgCanvas = document.getElementById('bgCanvas');
+            maskCanvas = document.getElementById('maskCanvas');
+            resultDiv = document.getElementById('result');
+            bgCtx = bgCanvas.getContext('2d');
+            maskCtx = maskCanvas.getContext('2d');
+
             setCanvasSize();
             loadBackground(); // 在網頁載入時載入背景
+            setupEventListeners();
             initLiff();
         };
     </script>

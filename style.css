@@ -35,18 +35,18 @@ h1 {
 #result {
   display: none; /* 預設隱藏 */
   margin-top: 20px;
-  text-align: center; /* 文字置中 */
+  text-align: center;
 }
 
 #prizeText {
-  font-size: 64px;
+  font-size: 48px;
   font-weight: bold;
   color: #e60000;
+  margin-bottom: 10px;
 }
 
 #noticeText {
-  font-size: 50px;
+  font-size: 36px;
   font-weight: bold;
   color: #d60000;
-  margin-top: 10px; /* 和中獎訊息間距 */
 }

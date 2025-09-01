@@ -159,45 +159,10 @@ const images = {
 };
 
 let img = new Image();
-img.crossOrigin='anonymous';
+img.crossOrigin = 'anonymous';
 
-async function initLiff() {
-  await liff.init({ liffId: LIFF_ID });
-  if(!liff.isLoggedIn()) liff.login();
-  else{
-    try { const profile = await liff.getProfile(); userId = profile.userId || '未知'; }
-    catch(err){ console.error(err); }
-    getDeviceInfo();
-    checkIfUserHasDrawn();
-  }
-}
-
-async function checkIfUserHasDrawn() {
-  try {
-    const res = await fetch(`${GAS_URL}?userId=${userId}`);
-    const data = await res.json(); // { hasDrawn:true/false }
-    if(data.hasDrawn){
-      resultDiv.innerHTML = '<div class="prize">⚠️ 您已參加過抽獎</div>';
-      maskCanvas.style.pointerEvents='none';
-    } else loadPrize();
-  } catch(err){ console.error(err); }
-}
-
-async function loadPrize() {
-  const params = new URLSearchParams({ action:'draw', userId, deviceBrand, deviceModel, timestamp:new Date().toISOString() });
-  const res = await fetch(`${GAS_URL}?${params.toString()}`);
-  const data = await res.json();
-  prize = data.prize || '命運獎';
-  img.src = images[prize];
-}
-
-img.onload = () => {
-  setCanvasSize();
-  bgCtx.drawImage(img,0,0,bgCanvas.width,bgCanvas.height);
-  initMask();
-};
-
-// 設定 canvas 尺寸
+// --------------------
+// Canvas 尺寸設定
 function setCanvasSize(){
   const width = wrapper.clientWidth;
   const height = Math.floor(width * 1350/1080);
@@ -206,12 +171,30 @@ function setCanvasSize(){
   bgCanvas.height = maskCanvas.height = height;
 }
 
+// --------------------
+// drawImage 保持比例
+function drawImageKeepRatio(img){
+  const cw = bgCanvas.width;
+  const ch = bgCanvas.height;
+  const iw = img.width;
+  const ih = img.height;
+  const scale = Math.min(cw/iw, ch/ih);
+  const w = iw*scale;
+  const h = ih*scale;
+  const x = (cw-w)/2;
+  const y = (ch-h)/2;
+  bgCtx.clearRect(0,0,cw,ch);
+  bgCtx.drawImage(img,x,y,w,h);
+}
+
+// --------------------
 // 初始化遮罩
 function initMask(){
   maskCtx.fillStyle='#999';
   maskCtx.fillRect(0,0,maskCanvas.width,maskCanvas.height);
 }
 
+// --------------------
 // 檢查刮開比例
 function checkScratchPercent(){
   const imgData = maskCtx.getImageData(0,0,maskCanvas.width,maskCanvas.height).data;
@@ -221,14 +204,14 @@ function checkScratchPercent(){
   if(percent>50){
     resultDiv.innerHTML = `
       <div class="prize">🎉 恭喜你中了【${prize}】 🎉</div>
-      <div class="notice" style="color:#d60000;font-weight:bold;font-size:70px;">請洽服務人員兌獎</div>
+      <div class="notice">請洽服務人員兌獎</div>
     `;
-    resultDiv.style.display='flex';
     maskCanvas.style.pointerEvents='none';
     sendData(prize);
   }
 }
 
+// --------------------
 // 送資料
 function sendData(prize){
   if(hasSentData) return;
@@ -237,6 +220,7 @@ function sendData(prize){
   fetch(`${GAS_URL}?${params.toString()}`).catch(err=>console.error(err));
 }
 
+// --------------------
 // 刮刮卡事件
 let isDrawing=false;
 function getPos(e){ 
@@ -262,11 +246,43 @@ maskCanvas.addEventListener('touchstart',e=>{isDrawing=true; scratch(e);},{passi
 maskCanvas.addEventListener('touchmove',scratch,{passive:false});
 maskCanvas.addEventListener('touchend',()=>{isDrawing=false; checkScratchPercent();});
 
+// --------------------
+// LIFF 與抽獎初始化
+async function initLiff() {
+  await liff.init({ liffId: LIFF_ID });
+  if(!liff.isLoggedIn()) liff.login();
+  else{
+    try { const profile = await liff.getProfile(); userId = profile.userId || '未知'; }
+    catch(err){ console.error(err); }
+    loadPrize();
+  }
+}
+
+// --------------------
+// 抽獎
+async function loadPrize() {
+  const params = new URLSearchParams({ action:'draw', userId, deviceBrand, deviceModel, timestamp:new Date().toISOString() });
+  const res = await fetch(`${GAS_URL}?${params.toString()}`);
+  const data = await res.json();
+  prize = data.prize || '命運獎';
+  img.src = images[prize];
+}
+
+// --------------------
+// 圖片載入事件
+img.onload = () => {
+  setCanvasSize();
+  drawImageKeepRatio(img);
+  initMask();
+};
+
+// --------------------
+// 監聽視窗縮放
 window.addEventListener('resize',()=>{
   setCanvasSize();
-  bgCtx.drawImage(img,0,0,bgCanvas.width,bgCanvas.height);
-  // 不重置遮罩，保留已刮部分
+  drawImageKeepRatio(img);
 });
 
+// --------------------
 initLiff();
 </script>

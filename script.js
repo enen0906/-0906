@@ -1,5 +1,5 @@
 const LIFF_ID = '2007597530-o1xaVbZm';
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbyWymklcU5nnpdPXMTi5CKX859HjgPeP7mHvlgrUmFiY2W_VzK6nbLPVfXA1PjKhbsX/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxqa2xiM8ZUvN8Izt5siIF4_AafygmWWni0Gtf59rCZCyovV4Sun-DFLonehWktxeOb/exec';
 
 const wrapper = document.getElementById('wrapper');
 const bgCanvas = document.getElementById('bgCanvas');

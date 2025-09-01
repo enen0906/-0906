@@ -1,6 +1,5 @@
 // ===== 型號對照表 =====
 const modelMap = {
-  // Galaxy S 系列
   "SM-G9800": "Galaxy S20",
   "SM-G9860": "Galaxy S20+",
   "SM-G9880": "Galaxy S20 Ultra",
@@ -19,8 +18,6 @@ const modelMap = {
   "SM-S9310": "Galaxy S25",
   "SM-S9360": "Galaxy S25+",
   "SM-S9380": "Galaxy S25 Ultra",
-
-  // Galaxy Z 系列
   "SM-F7000": "Galaxy Z Flip",
   "SM-F9160": "Galaxy Z Fold2",
   "SM-F7110": "Galaxy Z Flip3",
@@ -31,8 +28,6 @@ const modelMap = {
   "SM-F9460": "Galaxy Z Fold5",
   "SM-F7410": "Galaxy Z Flip6",
   "SM-F9560": "Galaxy Z Fold6",
-
-  // Galaxy A 系列
   "SM-A5150": "Galaxy A51",
   "SM-A7150": "Galaxy A71",
   "SM-A3250": "Galaxy A32",
@@ -52,19 +47,17 @@ const modelMap = {
   "SM-A3560": "Galaxy A35 5G",
   "SM-A5560": "Galaxy A55 5G",
   "SM-A1660": "Galaxy A16",
-
-  // 已有的機種
-  "iPhone": "Apple iPhone（型號未知）",
-  "Pixel 7": "Google Pixel 7",
-  "Pixel 7 Pro": "Google Pixel 7 Pro",
-  "Pixel 8": "Google Pixel 8",
-  "Pixel 8 Pro": "Google Pixel 8 Pro",
-  "Pixel 9": "Google Pixel 9",
-  "Pixel 9 Pro": "Google Pixel 9 Pro",
-  "OnePlus 9": "OnePlus 9",
-  "OnePlus 10": "OnePlus 10",
-  "OnePlus 11": "OnePlus Buds",
-  "OnePlus 13": "OnePlus 13",
+  "IPHONE": "Apple iPhone（型號未知）",
+  "PIXEL 7": "Google Pixel 7",
+  "PIXEL 7 PRO": "Google Pixel 7 Pro",
+  "PIXEL 8": "Google Pixel 8",
+  "PIXEL 8 PRO": "Google Pixel 8 Pro",
+  "PIXEL 9": "Google Pixel 9",
+  "PIXEL 9 PRO": "Google Pixel 9 Pro",
+  "ONEPLUS 9": "OnePlus 9",
+  "ONEPLUS 10": "OnePlus 10",
+  "ONEPLUS 11": "OnePlus 11",
+  "ONEPLUS 13": "OnePlus 13",
   "XQ-DC72": "Sony Xperia 1 V",
   "XQ-DQ72": "Sony Xperia 5 V",
   "23078PND5G": "Xiaomi 13T Pro",
@@ -81,7 +74,6 @@ const modelMap = {
   "RMX3820": "realme 11 Pro+",
   "RMX3866": "realme GT Neo5"
 };
-
 
 // ===== LIFF 與裝置資訊 =====
 const LIFF_ID = '2007597530-o1xaVbZm';
@@ -109,7 +101,6 @@ function guessModelName(rawModel) {
   return modelMap[key] || rawModel;
 }
 
-// 判斷品牌
 function detectBrand(modelCode) {
   const code = modelCode.toUpperCase();
   if (code.startsWith("SM-")) return "Samsung";
@@ -128,10 +119,18 @@ function detectBrand(modelCode) {
 function getAndroidModel(ua) {
   const regex = /android.*;\s([^;]+)\sbuild/i;
   let match = ua.match(regex);
-  if (match && match[1]) return match[1].trim();
+  if (match && match[1]) {
+    let model = match[1].trim();
+    if (model.toLowerCase() === 'wv') return "Android裝置";
+    return model;
+  }
   const regex2 = /android.*;\s([^;]+)\)/i;
   match = ua.match(regex2);
-  if (match && match[1]) return match[1].trim();
+  if (match && match[1]) {
+    let model = match[1].trim();
+    if (model.toLowerCase() === 'wv') return "Android裝置";
+    return model;
+  }
   return "Android裝置";
 }
 
@@ -164,6 +163,9 @@ function getDeviceInfo() {
     const modelCode = rawModel.toUpperCase();
     deviceModel = guessModelName(modelCode);
     deviceBrand = detectBrand(modelCode);
+  } else {
+    deviceBrand = '未知';
+    deviceModel = '未知';
   }
 }
 
@@ -171,13 +173,16 @@ function getDeviceInfo() {
 function sendData(prize) {
   if (hasSentData) return;
   hasSentData = true;
+
   const params = new URLSearchParams({
     prize,
     deviceBrand,
     deviceModel,
     userId,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    action: 'draw'
   });
+
   fetch(`${GAS_URL}?${params.toString()}`)
     .then(res => res.text())
     .then(data => console.log('資料已送出', data))
@@ -205,7 +210,7 @@ img.src = images[prize];
 // ===== 畫布設定 =====
 function setCanvasSize() {
   const width = wrapper.clientWidth;
-  const height = Math.floor(width * 1350 / 1080);
+  const height = wrapper.clientHeight; // 🔥 直接用 wrapper 的高度
   bgCanvas.width = maskCanvas.width = width;
   bgCanvas.height = maskCanvas.height = height;
 }
@@ -265,6 +270,8 @@ img.onload = () => {
 window.addEventListener('resize', () => {
   setCanvasSize();
   bgCtx.drawImage(img, 0, 0, bgCanvas.width, bgCanvas.height);
+  initMask();
 });
 
+// 啟動 LIFF
 initLiff();

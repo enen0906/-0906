@@ -204,7 +204,18 @@ function sendData(prize) {
     .catch(err => console.error('送出失敗', err));
 }
 
-// 抽獎設定
+const wrapper = document.getElementById('wrapper');
+const bgCanvas = document.getElementById('bgCanvas');
+const maskCanvas = document.getElementById('maskCanvas');
+const bgCtx = bgCanvas.getContext('2d');
+const maskCtx = maskCanvas.getContext('2d');
+const resultDiv = document.getElementById('result');
+const prizeText = document.getElementById('prizeText');
+const noticeText = document.getElementById('noticeText');
+
+let isDrawing = false;
+
+// 抽獎機率設定
 const rand = Math.random();
 let prize = '';
 if (rand < 4 / 303) {
@@ -215,6 +226,7 @@ if (rand < 4 / 303) {
     prize = '命運獎';
 }
 
+// 圖片對應
 const images = {
     '天選獎S1': 'https://i.postimg.cc/RCGKq4nk/6.png',
     '天選獎S2': 'https://i.postimg.cc/gkxjRNkf/5.png',
@@ -226,6 +238,7 @@ let img = new Image();
 img.crossOrigin = 'anonymous';
 img.src = images[prize];
 
+// 設定畫布大小
 function setCanvasSize() {
   const width = wrapper.clientWidth;
   const height = Math.floor(width * 1350 / 1080);
@@ -234,38 +247,40 @@ function setCanvasSize() {
   bgCanvas.height = maskCanvas.height = height;
 }
 
+// 初始化遮罩
 function initMask() {
   maskCtx.fillStyle = '#999';
   maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
 }
 
+// 計算刮開比例
 function checkScratchPercent() {
-  const imgData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height).data;
-  let cleared = 0;
-  for (let i = 3; i < imgData.length; i += 4) {
-    if (imgData[i] === 0) cleared++;
-  }
-  const percent = cleared / (imgData.length / 4) * 100;
-  if (percent > 50 && !hasSentData) {
-    resultDiv.innerHTML = `
-      <div class="prize">🎉 恭喜你中了【${prize}】 🎉</div>
-      <div class="notice">請洽服務人員兌獎</div>
-    `;
-    resultDiv.style.display = 'flex';
-    maskCanvas.style.pointerEvents = 'none';
-    sendData(prize);
-  }
+    const imgData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height).data;
+    let cleared = 0;
+    for (let i = 3; i < imgData.length; i += 4) {
+        if (imgData[i] === 0) cleared++;
+    }
+    const percent = cleared / (maskCanvas.width * maskCanvas.height) * 100;
+    if (percent > 50) {
+        prizeText.textContent = `🎉 恭喜你中了【${prize}】 🎉`;
+        noticeText.style.display = 'block';
+        resultDiv.style.display = 'block';
+        maskCanvas.style.pointerEvents = 'none';
+    }
 }
-
-let isDrawing = false;
-let lastPos = null;
 
 function getPos(e) {
   const rect = maskCanvas.getBoundingClientRect();
   if (e.touches && e.touches.length > 0) {
-    return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+    return {
+      x: e.touches[0].clientX - rect.left,
+      y: e.touches[0].clientY - rect.top
+    };
   } else {
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
   }
 }
 
@@ -273,41 +288,25 @@ function scratch(e) {
   if (!isDrawing) return;
   e.preventDefault();
   const { x, y } = getPos(e);
-
   maskCtx.globalCompositeOperation = 'destination-out';
-  maskCtx.lineCap = 'round';
-  maskCtx.lineJoin = 'round';
-  maskCtx.lineWidth = 100;
-
-  if (!lastPos) {
-    maskCtx.beginPath();
-    maskCtx.moveTo(x, y);
-    maskCtx.lineTo(x, y);
-    maskCtx.stroke();
-  } else {
-    maskCtx.beginPath();
-    maskCtx.moveTo(lastPos.x, lastPos.y);
-    maskCtx.lineTo(x, y);
-    maskCtx.stroke();
-  }
-
-  lastPos = { x, y };
+  maskCtx.beginPath();
+  maskCtx.arc(x, y, 50, 0, Math.PI * 2);
+  maskCtx.fill();
 }
 
 maskCanvas.addEventListener('mousedown', (e) => { isDrawing = true; scratch(e); });
 maskCanvas.addEventListener('mousemove', scratch);
-maskCanvas.addEventListener('mouseup', () => { isDrawing = false; lastPos = null; checkScratchPercent(); });
-maskCanvas.addEventListener('mouseleave', () => { isDrawing = false; lastPos = null; });
+maskCanvas.addEventListener('mouseup', () => { isDrawing = false; checkScratchPercent(); });
+maskCanvas.addEventListener('mouseleave', () => { isDrawing = false; });
 
 maskCanvas.addEventListener('touchstart', (e) => { isDrawing = true; scratch(e); }, { passive: false });
 maskCanvas.addEventListener('touchmove', scratch, { passive: false });
-maskCanvas.addEventListener('touchend', () => { isDrawing = false; lastPos = null; checkScratchPercent(); });
+maskCanvas.addEventListener('touchend', () => { isDrawing = false; checkScratchPercent(); });
 
 img.onload = () => {
   setCanvasSize();
   bgCtx.drawImage(img, 0, 0, bgCanvas.width, bgCanvas.height);
   initMask();
-  initLiff();
 };
 
 window.addEventListener('resize', () => {

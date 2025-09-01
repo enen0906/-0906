@@ -204,7 +204,7 @@ function sendData(prize) {
     .catch(err => console.error('送出失敗', err));
 }
 
-// 抽獎機率設定
+// 抽獎設定
 const rand = Math.random();
 let prize = '';
 if (rand < 4 / 303) {
@@ -249,9 +249,9 @@ function checkScratchPercent() {
   if (percent > 50 && !hasSentData) {
     resultDiv.innerHTML = `
       <div class="prize">🎉 恭喜你中了【${prize}】 🎉</div>
-      <div class="notice" style="color:#d60000; font-weight:bold; font-size:70px;">請洽服務人員兌獎</div>
+      <div class="notice">請洽服務人員兌獎</div>
     `;
-    resultDiv.style.display = 'block';
+    resultDiv.style.display = 'flex';
     maskCanvas.style.pointerEvents = 'none';
     sendData(prize);
   }
@@ -294,31 +294,14 @@ function scratch(e) {
   lastPos = { x, y };
 }
 
-maskCanvas.addEventListener('mousedown', (e) => {
-  isDrawing = true;
-  scratch(e);
-});
+maskCanvas.addEventListener('mousedown', (e) => { isDrawing = true; scratch(e); });
 maskCanvas.addEventListener('mousemove', scratch);
-maskCanvas.addEventListener('mouseup', () => {
-  isDrawing = false;
-  lastPos = null;
-  checkScratchPercent();
-});
-maskCanvas.addEventListener('mouseleave', () => {
-  isDrawing = false;
-  lastPos = null;
-});
+maskCanvas.addEventListener('mouseup', () => { isDrawing = false; lastPos = null; checkScratchPercent(); });
+maskCanvas.addEventListener('mouseleave', () => { isDrawing = false; lastPos = null; });
 
-maskCanvas.addEventListener('touchstart', (e) => {
-  isDrawing = true;
-  scratch(e);
-}, { passive: false });
+maskCanvas.addEventListener('touchstart', (e) => { isDrawing = true; scratch(e); }, { passive: false });
 maskCanvas.addEventListener('touchmove', scratch, { passive: false });
-maskCanvas.addEventListener('touchend', () => {
-  isDrawing = false;
-  lastPos = null;
-  checkScratchPercent();
-});
+maskCanvas.addEventListener('touchend', () => { isDrawing = false; lastPos = null; checkScratchPercent(); });
 
 img.onload = () => {
   setCanvasSize();

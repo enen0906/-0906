@@ -1,7 +1,8 @@
 body {
   text-align: center;
-  margin-top: 50px;
+  margin: 50px 0;
   font-family: sans-serif;
+  background-color: #f5f5f5;
 }
 
 h1 {
@@ -17,9 +18,8 @@ h1 {
   width: 100vw;
   max-width: 800px;
   margin: 0 auto;
-  height: calc(100vw * 1.25);
-  max-height: 1000px;
   border: 2px solid #333;
+  background-color: #fff;
 }
 
 #wrapper canvas {
@@ -33,7 +33,7 @@ h1 {
 }
 
 #result {
-  display: none; /* 預設隱藏 */
+  display: none;
   margin-top: 20px;
   text-align: center;
 }

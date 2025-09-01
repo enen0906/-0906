@@ -35,20 +35,22 @@ h1 {
 
 /* 結果訊息，放在畫布下方，文字置中 */
 #result {
-  display: none; /* 預設隱藏 */
-  margin-top: 20px; /* 與畫布間距 */
-  text-align: center;
+  display: none;           /* 預設隱藏 */
+  margin: 20px auto 0;     /* 與畫布間距，上方20px */
+  text-align: center;      /* 文字置中 */
+  max-width: 800px;        /* 與畫布同寬 */
 }
 
 #result .prize {
   font-size: 64px;
   font-weight: 700;
   color: #ff4500;
-  margin-bottom: 10px; /* 與通知文字距離 */
+  line-height: 1.2;
 }
 
 #result .notice {
   font-size: 50px;
   color: #e60000;
   font-weight: 700;
+  margin-top: 10px; /* 緊跟在中獎訊息下面 */
 }

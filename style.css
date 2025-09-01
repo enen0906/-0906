@@ -1,37 +1,36 @@
 body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  background: #f8f8f8;
   margin: 0;
-  font-family: sans-serif;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: #f0f0f0;
+  padding: 0;
 }
 
 #wrapper {
   position: relative;
-  max-width: 500px; /* 固定最大寬度 */
+  max-width: 500px;
   width: 100%;
   margin: 20px auto;
-  aspect-ratio: 1080 / 1350; /* 固定比例 */
+  aspect-ratio: 1080 / 1350; /* 🔥 用 CSS 控制比例 */
+  border: 2px solid #ccc;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
 canvas {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;  /* 保持比例縮放 */
-  height: 100%;
-  display: block;
+  width: 100%;   /* 🔥 寬度自動縮放 */
+  height: 100%;  /* 🔥 高度自動縮放 */
 }
 
 #result {
-  text-align: center;
   margin-top: 20px;
-  display: none;
+  font-size: 1.2em;
 }
 
-#noticeText {
-  display: none;
-  font-size: 14px;
-  color: #555;
+#prizeText {
+  font-size: 1.5em;
+  color: #e91e63;
 }

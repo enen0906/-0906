@@ -33,12 +33,20 @@ h1 {
 }
 
 #result {
-  display: none;       /* 預設隱藏 */
-  margin: 20px auto 0; /* 與畫布間距 */
-  text-align: center;  /* 文字置中 */
-  font-weight: 700;
+  display: none; /* 預設隱藏 */
+  margin-top: 20px;
+  text-align: center; /* 文字置中 */
+}
+
+#prizeText {
+  font-size: 64px;
+  font-weight: bold;
   color: #e60000;
+}
+
+#noticeText {
   font-size: 50px;
-  line-height: 1.4;
-  white-space: pre-line; /* 保留換行 */
+  font-weight: bold;
+  color: #d60000;
+  margin-top: 10px; /* 和中獎訊息間距 */
 }

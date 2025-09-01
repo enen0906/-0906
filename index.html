@@ -2,6 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>⭐大學星生活⭐刮刮卡</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -11,10 +12,12 @@
     <canvas id="bgCanvas"></canvas>
     <canvas id="maskCanvas"></canvas>
   </div>
-  <div id="result">
-    <h2 id="prizeText"></h2>
-    <p id="noticeText">請洽服務人員兌換獎品。</p>
+
+  <div id="result" style="display:none;">
+    <p id="prizeText"></p>
+    <p id="noticeText" style="display:none;">請洽服務人員兌獎</p>
   </div>
+
   <script src="script.js"></script>
 </body>
 </html>

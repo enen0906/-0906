@@ -198,7 +198,7 @@
             if (key.includes("OPPO")) return rawModel;
             if (key.includes("ASUS")) return rawModel;
             if (key.includes("VIVO")) return rawModel;
-            if (key.includes("REALME")) return rawModel;
+            if (key.includes("REALME")) return "realme";
             if (key.includes("XIAOMI") || key.includes("REDMI")) return "Xiaomi";
             return rawModel;
         }
@@ -351,7 +351,7 @@
         function loadBackground() {
             const img = new Image();
             img.crossOrigin = 'anonymous';
-            img.src = 'https://i.ibb.co/gJFkXwQ/BG.png';
+            img.src = 'https://i.ibb.co/2d1rP3W/BG.png'; // Updated background image URL
             img.onload = () => {
                 setCanvasSize();
                 bgCtx.drawImage(img, 0, 0, bgCanvas.width, bgCanvas.height);

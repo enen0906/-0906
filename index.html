@@ -296,10 +296,10 @@
                 } else {
                     const prize = data.prize;
                     const images = {
-                        '天選獎S1': 'https://i.postimg.cc/RCGKq4nk/6.png',
-                        '天選獎S2': 'https://i.postimg.cc/gkxjRNkf/5.png',
-                        '機會獎': 'https://i.postimg.cc/3xpwfNG1/3.png',
-                        '命運獎': 'https://i.postimg.cc/RFCV0TDp/2.png'
+                        '天選獎S1': 'https://i.ibb.co/6PzL2nF/S1.png',
+                        '天選獎S2': 'https://i.ibb.co/V959X21/S2.png',
+                        '機會獎': 'https://i.ibb.co/8r8c6fT/A.png',
+                        '命運獎': 'https://i.ibb.co/YyLgT7c/B.png'
                     };
 
                     const img = new Image();
@@ -351,7 +351,7 @@
         function loadBackground() {
             const img = new Image();
             img.crossOrigin = 'anonymous';
-            img.src = 'https://i.postimg.cc/y86fP4X6/1.png'; // 預設背景圖 URL
+            img.src = 'https://i.ibb.co/gJFkXwQ/BG.png';
             img.onload = () => {
                 setCanvasSize();
                 bgCtx.drawImage(img, 0, 0, bgCanvas.width, bgCanvas.height);

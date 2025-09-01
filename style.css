@@ -3,41 +3,6 @@ body {
   margin-top: 50px;
   font-family: sans-serif;
 }
-#wrapper {
-  position: relative;
-  width: 100vw;        /* 100% 寬度 */
-  max-width: 800px;    /* 最大寬度 800px */
-  margin: 0 auto;
-  height: calc(100vw * 1.25); /* 依圖片比例調整 */
-  max-height: 1000px;  /* 最大高度 1000px */
-}
-#wrapper canvas {
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  border: 2px solid #333;
-  touch-action: none;
-}
-#result {
-  margin-top: 20px;
-  color: #c00;
-  font-weight: 700;
-  line-height: 1.2;
-}
-#result .prize {
-  font-size: 64px;
-}
-#result .notice {
-  font-size: 70px;
-  color: #e60000;
-  font-weight: 700;
-  margin-top: 8px;
-}
-body {
-  text-align: center;
-  margin-top: 50px;
-  font-family: sans-serif;
-}
 
 h1 {
   font-size: 48px;
@@ -56,28 +21,43 @@ h1 {
   max-height: 1000px;
 }
 
+/* 背景與遮罩畫布 */
 #wrapper canvas {
   position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   border: 2px solid #333;
   touch-action: none;
+  z-index: 1;
 }
 
+/* 結果訊息，分開上下 */
 #result {
-  margin-top: 20px;
-  color: #c00;
-  font-weight: 700;
-  line-height: 1.2;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3; /* 高於 canvas */
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start; /* 從上方開始排列 */
+  text-align: center;
 }
 
 #result .prize {
   font-size: 64px;
+  margin-top: 40%; /* 調整文字到畫布中間 */
 }
 
 #result .notice {
-  font-size: 70px;
+  font-size: 50px;
   color: #e60000;
   font-weight: 700;
-  margin-top: 8px;
+  margin-top: auto; /* 自動推到最下方 */
+  margin-bottom: 10px; /* 與畫布底部距離 */
 }

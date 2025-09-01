@@ -10,20 +10,19 @@
             height: 100%;
             margin: 0;
             padding: 0;
-        }
-
-        body {
-            text-align: center;
-            padding: 20px;
-            font-family: sans-serif;
             background: #fafafa;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
         }
 
         h1 {
             font-size: 42px;
             color: #ff4500;
             font-weight: bold;
-            margin-bottom: 20px;
+            margin: 20px 0;
             text-shadow: 1px 1px 2px #a00;
         }
 
@@ -31,8 +30,10 @@
             position: relative;
             width: 90vw;
             max-width: 500px;
-            margin: 0 auto;
-            aspect-ratio: 1080/1350;
+            aspect-ratio: 1080 / 1350;
+            margin-bottom: 25px;
+            /* 為了偵錯，加了紅色邊框 */
+            border: 2px dashed red;
         }
 
         #wrapper canvas {
@@ -42,23 +43,17 @@
             width: 100%;
             height: 100%;
             border-radius: 12px;
-            touch-action: none;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            transition: transform 0.3s ease-in-out;
-        }
-
-        #wrapper canvas:hover {
-            transform: translateY(-5px);
+            /* 為了偵錯，加了紅色邊框 */
+            border: 2px dashed blue;
         }
 
         #result {
-            margin-top: 25px;
             text-align: center;
         }
 
         #result .prize {
             font-size: 48px;
-            margin-bottom: 10px;
             font-weight: 700;
             color: #c00;
         }
@@ -72,20 +67,13 @@
         .loading-text {
             font-size: 24px;
             color: #555;
-            margin-top: 20px;
             animation: pulse 1.5s infinite;
         }
 
         @keyframes pulse {
-            0% {
-                opacity: 0.5;
-            }
-            50% {
-                opacity: 1;
-            }
-            100% {
-                opacity: 0.5;
-            }
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
         }
     </style>
 </head>
@@ -108,13 +96,11 @@
         let bgCtx;
         let maskCtx;
         let resultDiv;
+        let userId = '未知';
 
+        // 裝置資訊
         let deviceBrand = '未知';
         let deviceModel = '未知';
-        let userId = '未知';
-        let hasSentData = false;
-        let lastX = 0;
-        let lastY = 0;
 
         // 型號對照表
         const modelMap = {
@@ -278,14 +264,13 @@
                 }
             } catch (err) {
                 console.error('LIFF 初始化失敗', err);
-                if (err.code === '2007597530') {
-                    resultDiv.innerHTML = '<div class="notice">LIFF ID 無效，請確認設定。</div>';
-                }
+                resultDiv.innerHTML = '<div class="notice">LIFF 初始化失敗，請確認 LIFF ID 是否正確。</div>';
             }
         }
 
         // 向 Google Apps Script 傳送抽獎資料
         async function sendData() {
+            let hasSentData = false;
             if (hasSentData) return;
             hasSentData = true;
 
@@ -309,9 +294,8 @@
                     resultDiv.innerHTML = `<div class="notice">你已經刮過囉！</div>`;
                 } else {
                     const prize = data.prize;
-                    // 請在這裡設定你的獎項圖片 URL
                     const images = {
-                        '天選獎S1': 'https://i.ibb.co/L5hY52B/S1-prize.jpg', 
+                        '天選獎S1': 'https://i.ibb.co/L5hY52B/S1-prize.jpg',
                         '天選獎S2': 'https://i.ibb.co/6PzL2nF/S2-prize.jpg',
                         '機會獎': 'https://i.ibb.co/6Pq931P/A.png',
                         '命運獎': 'https://i.ibb.co/YyLgT7c/B.png'
@@ -322,9 +306,8 @@
                     img.src = images[prize] || 'https://placehold.co/1080x1350/999999/FFFFFF?text=錯誤';
 
                     img.onload = () => {
-                        setCanvasSize();
                         bgCtx.drawImage(img, 0, 0, bgCanvas.width, bgCanvas.height);
-                        maskCanvas.style.opacity = '0'; // 隱藏遮罩
+                        maskCanvas.style.opacity = '0';
                         resultDiv.innerHTML = `<div class="prize">🎉 恭喜你中了【${prize}】 🎉</div><div class="notice">請洽服務人員兌獎</div>`;
                     };
                     img.onerror = () => {
@@ -339,24 +322,10 @@
 
         // 畫布大小設定
         function setCanvasSize() {
-            const aspect_ratio = 1080 / 1350;
-            const containerWidth = window.innerWidth * 0.9;
-            const containerHeight = window.innerHeight - 150; // 減去標題和結果區塊的空間
-
-            let finalWidth, finalHeight;
-            if (containerWidth / containerHeight > aspect_ratio) {
-                finalHeight = containerHeight;
-                finalWidth = finalHeight * aspect_ratio;
-            } else {
-                finalWidth = containerWidth;
-                finalHeight = finalWidth / aspect_ratio;
-            }
-
-            wrapper.style.width = `${finalWidth}px`;
-            wrapper.style.height = `${finalHeight}px`;
-
-            bgCanvas.width = maskCanvas.width = finalWidth;
-            bgCanvas.height = maskCanvas.height = finalHeight;
+            const wrapperRect = wrapper.getBoundingClientRect();
+            bgCanvas.width = maskCanvas.width = wrapperRect.width;
+            bgCanvas.height = maskCanvas.height = wrapperRect.height;
+            console.log(`畫布尺寸: ${bgCanvas.width}x${bgCanvas.height}`);
         }
 
         // 初始化遮罩
@@ -455,7 +424,7 @@
             loadBackground();
         });
 
-        window.onload = () => {
+        window.addEventListener('DOMContentLoaded', () => {
             wrapper = document.getElementById('wrapper');
             bgCanvas = document.getElementById('bgCanvas');
             maskCanvas = document.getElementById('maskCanvas');
@@ -463,11 +432,10 @@
             bgCtx = bgCanvas.getContext('2d');
             maskCtx = maskCanvas.getContext('2d');
 
-            setCanvasSize();
             loadBackground();
             setupEventListeners();
             initLiff();
-        };
+        });
     </script>
 </body>
 </html>

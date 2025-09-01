@@ -1,23 +1,11 @@
 const LIFF_ID = '2007597530-o1xaVbZm';
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxqa2xiM8ZUvN8Izt5siIF4_AafygmWWni0Gtf59rCZCyovV4Sun-DFLonehWktxeOb/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbqa2xiM8ZUvN8Izt5siIF4_AafygmWWni0Gtf59rCZCyovV4Sun-DFLonehWktxeOb/exec';
 
-const wrapper = document.getElementById('wrapper');
-const bgCanvas = document.getElementById('bgCanvas');
-const maskCanvas = document.getElementById('maskCanvas');
-const bgCtx = bgCanvas.getContext('2d');
-const maskCtx = maskCanvas.getContext('2d');
-
-const resultDiv = document.getElementById('result');
-const prizeText = document.getElementById('prizeText');
-const noticeText = document.getElementById('noticeText');
-
+let userId = '未知';
 let deviceBrand = '未知';
 let deviceModel = '未知';
-let userId = '未知';
-let hasSentData = false;
-let isDrawing = false;
 
-// 型號對照表，全部大寫 Key
+// ===== 型號對照表 =====
 const modelMap = {
   // Galaxy S 系列
   "SM-G9800": "Galaxy S20",
@@ -38,7 +26,6 @@ const modelMap = {
   "SM-S9310": "Galaxy S25",
   "SM-S9360": "Galaxy S25+",
   "SM-S9380": "Galaxy S25 Ultra",
-
   // Galaxy Z 系列
   "SM-F7000": "Galaxy Z Flip",
   "SM-F9160": "Galaxy Z Fold2",
@@ -50,7 +37,6 @@ const modelMap = {
   "SM-F9460": "Galaxy Z Fold5",
   "SM-F7410": "Galaxy Z Flip6",
   "SM-F9560": "Galaxy Z Fold6",
-
   // Galaxy A 系列
   "SM-A5150": "Galaxy A51",
   "SM-A7150": "Galaxy A71",
@@ -71,39 +57,46 @@ const modelMap = {
   "SM-A3560": "Galaxy A35 5G",
   "SM-A5560": "Galaxy A55 5G",
   "SM-A1660": "Galaxy A16",
-
-  // 已有的機種
-  "iPhone": "Apple iPhone（型號未知）",
-  "Pixel 7": "Google Pixel 7",
-  "Pixel 7 Pro": "Google Pixel 7 Pro",
-  "Pixel 8": "Google Pixel 8",
-  "Pixel 8 Pro": "Google Pixel 8 Pro",
-  "Pixel 9": "Google Pixel 9",
-  "Pixel 9 Pro": "Google Pixel 9 Pro",
-  "OnePlus 9": "OnePlus 9",
-  "OnePlus 10": "OnePlus 10",
-  "OnePlus 11": "OnePlus Buds",
-  "OnePlus 13": "OnePlus 13",
+  // Apple
+  "IPHONE": "Apple iPhone（型號未知）",
+  // Google Pixel
+  "PIXEL 7": "Google Pixel 7",
+  "PIXEL 7 PRO": "Google Pixel 7 Pro",
+  "PIXEL 8": "Google Pixel 8",
+  "PIXEL 8 PRO": "Google Pixel 8 Pro",
+  "PIXEL 9": "Google Pixel 9",
+  "PIXEL 9 PRO": "Google Pixel 9 Pro",
+  // OnePlus
+  "ONEPLUS 9": "OnePlus 9",
+  "ONEPLUS 10": "OnePlus 10",
+  "ONEPLUS 11": "OnePlus 11",
+  "ONEPLUS 13": "OnePlus 13",
+  // Sony
   "XQ-DC72": "Sony Xperia 1 V",
   "XQ-DQ72": "Sony Xperia 5 V",
+  // Xiaomi / Redmi
   "23078PND5G": "Xiaomi 13T Pro",
   "22071212AG": "Xiaomi 12T Pro",
   "23021RAA2Y": "Redmi Note 12",
   "23090RA98G": "Redmi Note 13 Pro",
+  // ASUS
   "AI2205": "ASUS ROG Phone 6",
   "AI2401": "ASUS ROG Phone 8",
   "AI2302": "ASUS Zenfone 10",
+  // OPPO
   "CPH2491": "OPPO Reno10",
   "CPH2525": "OPPO Find X6",
+  // vivo
   "V2238": "vivo X90",
   "V2303": "vivo Y78",
+  // realme
   "RMX3820": "realme 11 Pro+",
   "RMX3866": "realme GT Neo5"
 };
 
-
+// ===== 型號與品牌偵測函數 =====
 function guessModelName(rawModel) {
-  if (!rawModel) return rawModel || "未知機型";
+  if (!rawModel) return "未知機型";
   const key = rawModel.toUpperCase();
   if (modelMap[key]) return modelMap[key];
   if (key.startsWith("SM-A")) return "Samsung Galaxy A 系列 " + rawModel;
@@ -134,47 +127,36 @@ function detectBrand(modelCode) {
   return "Android";
 }
 
-// 修正後的 Android 型號抓取，排除 wv
 function getAndroidModel(ua) {
   const regex = /android.*;\s([^;]+)\sbuild/i;
   let match = ua.match(regex);
   if (match && match[1]) {
     let model = match[1].trim();
-    if (model.toLowerCase() === 'wv') {
-      return "Android裝置";
-    }
+    if (model.toLowerCase() === 'wv') return "Android裝置";
     return model;
   }
   const regex2 = /android.*;\s([^;]+)\)/i;
   match = ua.match(regex2);
   if (match && match[1]) {
     let model = match[1].trim();
-    if (model.toLowerCase() === 'wv') {
-      return "Android裝置";
-    }
+    if (model.toLowerCase() === 'wv') return "Android裝置";
     return model;
   }
   return "Android裝置";
 }
 
-// ------------------- LIFF 初始化 -------------------
+// ===== LIFF 初始化 =====
 async function initLiff() {
   await liff.init({ liffId: LIFF_ID });
-  if (!liff.isLoggedIn()) {
-    liff.login();
-  } else {
-    try {
-      const profile = await liff.getProfile();
-      userId = profile.userId || '未知';
-    } catch (err) {
-      console.error('無法取得使用者 ID', err);
-    }
-    getDeviceInfo();
+  if (!liff.isLoggedIn()) liff.login();
+  else {
+    try { userId = (await liff.getProfile()).userId || '未知'; }
+    catch(e){ console.error('無法取得 userId', e); }
+    detectDevice();
   }
 }
 
-// ------------------- 偵測裝置資訊 -------------------
-function getDeviceInfo() {
+function detectDevice() {
   const ua = navigator.userAgent.toLowerCase();
   if (ua.includes('iphone')) {
     deviceBrand = 'Apple';
@@ -185,44 +167,28 @@ function getDeviceInfo() {
   } else if (ua.includes('android')) {
     deviceModel = getAndroidModel(ua);
     deviceBrand = detectBrand(deviceModel);
+    deviceModel = guessModelName(deviceModel);
   } else {
     deviceBrand = '未知';
     deviceModel = '未知';
   }
 }
 
-// ------------------- Android 型號抓取 -------------------
-function getAndroidModel(ua) {
-  const regex = /android.*;\s([^;]+)\sbuild/i;
-  const match = ua.match(regex);
-  if (match && match[1]) return match[1].trim();
-  return 'Android裝置';
-}
-
-function detectBrand(modelCode) {
-  const code = modelCode.toUpperCase();
-  if (code.startsWith("SM-")) return "Samsung";
-  if (code.includes("IPHONE")) return "Apple";
-  return "Android";
-}
-
-// ------------------- 送資料到 GAS -------------------
-function sendData(prize) {
+// ===== 發送資料到 GAS =====
+async function sendDrawResult(prize) {
   if (hasSentData) return;
   hasSentData = true;
-
   const params = new URLSearchParams({
-    prize,
+    userId,
     deviceBrand,
     deviceModel,
-    userId,
-    timestamp: new Date().toISOString()
+    action: 'draw',
+    timestamp: new Date().toISOString(),
+    prize
   });
-
-  fetch(`${GAS_URL}?action=draw&${params.toString()}`)
-    .then(res => res.text())
-    .then(data => console.log('資料已送出', data))
-    .catch(err => console.error('送出失敗', err));
+  try {
+    await fetch(GAS_URL + '?' + params.toString());
+  } catch(e) { console.error('無法回傳資料', e); }
 }
 
 // ------------------- 抽獎設定 -------------------

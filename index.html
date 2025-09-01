@@ -152,6 +152,11 @@
             else if (ua.includes("Android")) { const rawModel = getAndroidModel(ua); deviceModel = guessModelName(rawModel); deviceBrand = detectBrand(rawModel); }
         }
 
+        function startApp() {
+            console.log('LIFF 初始化成功，開始應用程式...');
+            setupEventListeners();
+        }
+
         // 初始化 LIFF
         async function initLiff() {
             try {
@@ -162,6 +167,7 @@
                     const profile = await liff.getProfile();
                     userId = profile.userId || '未知';
                     getDeviceInfo();
+                    startApp();
                 }
             } catch (err) {
                 console.error('LIFF 初始化失敗', err);
@@ -245,7 +251,6 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             initLiff();
-            setupEventListeners();
         });
     </script>
 </body>

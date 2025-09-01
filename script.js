@@ -175,12 +175,13 @@ function sendData(prize) {
   hasSentData = true;
 
   const params = new URLSearchParams({
-    prize,
-    deviceBrand,
-    deviceModel,
-    userId,
-    timestamp: new Date().toISOString()
-  });
+  action: 'draw',     // ✅ 一定要有這個
+  prize,
+  deviceBrand,
+  deviceModel,
+  userId,
+  timestamp: new Date().toISOString()
+});
 
   const fullUrl = `${GAS_URL}?${params.toString()}`;
   console.log("送出的 URL:", fullUrl);  // 🔍 印出 URL

@@ -239,7 +239,6 @@
             return "Android裝置";
         }
 
-        // ====== 修正: 在這裡呼叫 getDeviceInfo 函式 ======
         function getDeviceInfo() {
             const ua = navigator.userAgent;
             if (ua.includes("iPhone")) {
@@ -252,7 +251,6 @@
             }
         }
 
-        // 初始化 LIFF
         async function initLiff() {
             try {
                 await liff.init({ liffId: LIFF_ID });
@@ -261,7 +259,6 @@
                 } else {
                     const profile = await liff.getProfile();
                     userId = profile.userId || '未知';
-                    // 修正: 呼叫 getDeviceInfo 來取得裝置資訊
                     getDeviceInfo(); 
                     console.log(`使用者ID: ${userId}`);
                     console.log(`裝置品牌: ${deviceBrand}, 裝置型號: ${deviceModel}`);
@@ -274,7 +271,6 @@
             }
         }
         
-        // ====== 修正: 傳送資料給 GAS 並取得獎品結果 ======
         async function sendData() {
             if (hasSentData) return;
             hasSentData = true;
@@ -350,6 +346,21 @@
                 sendData();
             }
         }
+        
+        // 載入背景圖
+        function loadBackground() {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.src = 'https://i.postimg.cc/y86fP4X6/1.png'; // 預設背景圖 URL
+            img.onload = () => {
+                setCanvasSize();
+                bgCtx.drawImage(img, 0, 0, bgCanvas.width, bgCanvas.height);
+                initMask(); // 載入背景後再初始化遮罩
+            };
+            img.onerror = () => {
+                resultDiv.innerHTML = '<div class="notice">背景圖片載入失敗，請檢查網址。</div>';
+            };
+        }
 
         // ====== 刮刮卡事件 ======
         let isDrawing = false;
@@ -384,12 +395,12 @@
         // 初始化
         window.addEventListener('resize', () => {
             setCanvasSize();
-            initMask(); // 重新繪製遮罩
+            loadBackground(); // 畫面調整大小後重新載入背景
         });
 
         window.onload = () => {
             setCanvasSize();
-            initMask();
+            loadBackground(); // 在網頁載入時載入背景
             initLiff();
         };
     </script>

@@ -331,8 +331,24 @@
 
         // 畫布大小設定
         function setCanvasSize() {
-            bgCanvas.width = maskCanvas.width = wrapper.clientWidth;
-            bgCanvas.height = maskCanvas.height = wrapper.clientHeight;
+            const aspect_ratio = 1080 / 1350;
+            const containerWidth = window.innerWidth * 0.9;
+            const containerHeight = window.innerHeight - 150; // 減去標題和結果區塊的空間
+
+            let finalWidth, finalHeight;
+            if (containerWidth / containerHeight > aspect_ratio) {
+                finalHeight = containerHeight;
+                finalWidth = finalHeight * aspect_ratio;
+            } else {
+                finalWidth = containerWidth;
+                finalHeight = finalWidth / aspect_ratio;
+            }
+
+            wrapper.style.width = `${finalWidth}px`;
+            wrapper.style.height = `${finalHeight}px`;
+
+            bgCanvas.width = maskCanvas.width = finalWidth;
+            bgCanvas.height = maskCanvas.height = finalHeight;
         }
 
         // 初始化遮罩

@@ -153,7 +153,7 @@ function getAndroidModel(ua) {
   return "Android裝置";
 }
 
-// 初始化 LIFF 並取得 userId
+// 初始化 LIFF
 async function initLiff() {
   await liff.init({ liffId: LIFF_ID });
   if (!liff.isLoggedIn()) {
@@ -169,32 +169,13 @@ async function initLiff() {
   }
 }
 
-// 取得裝置品牌與型號
-function getDeviceInfo() {
-  const ua = navigator.userAgent.toLowerCase();
-  if (ua.includes('iphone')) {
-    deviceBrand = 'Apple';
-    deviceModel = 'iPhone';
-  } else if (ua.includes('ipad')) {
-    deviceBrand = 'Apple';
-    deviceModel = 'iPad';
-  } else if (ua.includes('android')) {
-    const rawModel = getAndroidModel(ua);
-    const modelCode = rawModel.toUpperCase();
-    deviceModel = guessModelName(modelCode);
-    deviceBrand = detectBrand(modelCode);
-  } else {
-    deviceBrand = '未知';
-    deviceModel = '未知';
-  }
-}
-
-// 送資料到 Google Apps Script
+// 送資料到 GAS
 function sendData(prize) {
   if (hasSentData) return;
   hasSentData = true;
 
   const params = new URLSearchParams({
+    action: 'draw',   // 🚀 一定要帶 action=draw 才會寫入
     prize,
     deviceBrand,
     deviceModel,
@@ -208,23 +189,24 @@ function sendData(prize) {
     .catch(err => console.error('送出失敗', err));
 }
 
-// 抽獎機率設定
+// 抽獎機率
 const rand = Math.random();
 let prize = '';
 if (rand < 4 / 303) {
-    prize = Math.random() < 0.5 ? '天選獎S1' : '天選獎S2';
+  prize = Math.random() < 0.5 ? '天選獎S1' : '天選獎S2';
 } else if (rand < 4 / 303 + 0.5 * 299 / 303) {
-    prize = '機會獎';
+  prize = '機會獎';
 } else {
-    prize = '命運獎';
+  prize = '命運獎';
 }
 
 const images = {
-    '天選獎S1': 'https://i.postimg.cc/RCGKq4nk/6.png',
-    '天選獎S2': 'https://i.postimg.cc/gkxjRNkf/5.png',
-    '機會獎': 'https://i.postimg.cc/3xpwfNG1/3.png',
-    '命運獎': 'https://i.postimg.cc/RFCV0TDp/2.png'
+  '天選獎S1': 'https://i.postimg.cc/RCGKq4nk/6.png',
+  '天選獎S2': 'https://i.postimg.cc/gkxjRNkf/5.png',
+  '機會獎': 'https://i.postimg.cc/3xpwfNG1/3.png',
+  '命運獎': 'https://i.postimg.cc/RFCV0TDp/2.png'
 };
+
 // 載入圖片
 let img = new Image();
 img.crossOrigin = 'anonymous';
@@ -232,11 +214,8 @@ img.src = images[prize];
 
 // 畫布大小設定
 function setCanvasSize() {
-  const width = wrapper.clientWidth;
-  const height = Math.floor(width * 1350 / 1080);
-  wrapper.style.height = height + 'px';
-  bgCanvas.width = maskCanvas.width = width;
-  bgCanvas.height = maskCanvas.height = height;
+  bgCanvas.width = maskCanvas.width = wrapper.clientWidth;
+  bgCanvas.height = maskCanvas.height = wrapper.clientHeight;
 }
 
 // 初始化遮罩
@@ -247,38 +226,31 @@ function initMask() {
 
 // 檢查刮開比例
 function checkScratchPercent() {
-    const imgData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height).data;
-    let cleared = 0;
-    for (let i = 3; i < imgData.length; i += 4) {
-        if (imgData[i] === 0) cleared++;
-    }
-    const percent = cleared / (maskCanvas.width * maskCanvas.height) * 100;
-    if (percent > 50) {
-        resultDiv.innerHTML = `
-            <div class="prize">🎉 恭喜你中了【${prize}】 🎉</div>
-            <div class="notice" style="color:#d60000; font-weight:bold; font-size:70px;">請洽服務人員兌獎</div>
-        `;
-        resultDiv.style.display = 'block';
-        maskCanvas.style.pointerEvents = 'none';
-        sendData(prize);
-    }
+  const imgData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height).data;
+  let cleared = 0;
+  for (let i = 3; i < imgData.length; i += 4) {
+    if (imgData[i] === 0) cleared++;
+  }
+  const percent = cleared / (maskCanvas.width * maskCanvas.height) * 100;
+  if (percent > 50) {
+    resultDiv.innerHTML = `
+      <div class="prize">🎉 恭喜你中了【${prize}】 🎉</div>
+      <div class="notice">請洽服務人員兌獎</div>
+    `;
+    maskCanvas.style.pointerEvents = 'none';
+    sendData(prize);
+  }
 }
 
+// ====== 刮刮卡事件 ======
 let isDrawing = false;
 
 function getPos(e) {
   const rect = maskCanvas.getBoundingClientRect();
-  if (e.touches && e.touches.length > 0) {
-    return {
-      x: e.touches[0].clientX - rect.left,
-      y: e.touches[0].clientY - rect.top
-    };
-  } else {
-    return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    };
+  if (e.touches?.length) {
+    return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
   }
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
 }
 
 function scratch(e) {
@@ -287,33 +259,20 @@ function scratch(e) {
   const { x, y } = getPos(e);
   maskCtx.globalCompositeOperation = 'destination-out';
   maskCtx.beginPath();
-  maskCtx.arc(x, y, 50, 0, Math.PI * 2);
+  maskCtx.arc(x, y, 40, 0, Math.PI * 2);
   maskCtx.fill();
 }
 
-maskCanvas.addEventListener('mousedown', (e) => {
-  isDrawing = true;
-  scratch(e);
-});
+maskCanvas.addEventListener('mousedown', e => { isDrawing = true; scratch(e); });
 maskCanvas.addEventListener('mousemove', scratch);
-maskCanvas.addEventListener('mouseup', () => {
-  isDrawing = false;
-  checkScratchPercent();
-});
-maskCanvas.addEventListener('mouseleave', () => {
-  isDrawing = false;
-});
+maskCanvas.addEventListener('mouseup', () => { isDrawing = false; checkScratchPercent(); });
+maskCanvas.addEventListener('mouseleave', () => { isDrawing = false; });
 
-maskCanvas.addEventListener('touchstart', (e) => {
-  isDrawing = true;
-  scratch(e);
-}, { passive: false });
+maskCanvas.addEventListener('touchstart', e => { isDrawing = true; scratch(e); }, { passive: false });
 maskCanvas.addEventListener('touchmove', scratch, { passive: false });
-maskCanvas.addEventListener('touchend', () => {
-  isDrawing = false;
-  checkScratchPercent();
-});
+maskCanvas.addEventListener('touchend', () => { isDrawing = false; checkScratchPercent(); });
 
+// 載入完成
 img.onload = () => {
   setCanvasSize();
   bgCtx.drawImage(img, 0, 0, bgCanvas.width, bgCanvas.height);

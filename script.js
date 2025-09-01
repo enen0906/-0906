@@ -77,7 +77,7 @@ const modelMap = {
 
 // ===== LIFF 與裝置資訊 =====
 const LIFF_ID = '2007597530-o1xaVbZm';
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxqa2xiM8ZUvN8Izt5siIF4_AafygmWWni0Gtf59rCZCyovV4Sun-DFLonehWktxeOb/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbz9nfhw-DxaLUeSyMnmdvF02SjtlOLwccZ8--bFr_zqCgGJyCV4AYIe8fiUf0Vt1-tv/exec';
 
 const wrapper = document.getElementById('wrapper');
 const bgCanvas = document.getElementById('bgCanvas');

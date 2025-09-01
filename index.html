@@ -98,8 +98,9 @@
     <div id="result"></div>
 
     <script>
+        // 在這裡設定你的 LIFF ID 和 Google Apps Script 部署後的 URL
         const LIFF_ID = '2007597530-o1xaVbZm';
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbz9nfhw-DxaLUeSyMnmdvF02SjtlOLwccZ8--bFr_zqCgGJyCV4AYIe8fiUf0Vt1-tv/exec';
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbz9nfhw-DxaLUeSyMnmdvF02SjtlOLwccZ8--F-zqCgGJyCV4AYIe8fiUf0Vt1-tv/exec';
 
         let wrapper;
         let bgCanvas;
@@ -192,6 +193,7 @@
             "RMX3866": "realme GT Neo5"
         };
 
+        // 根據使用者代理 (User Agent) 字串猜測裝置型號
         function guessModelName(rawModel) {
             if (!rawModel) return rawModel || "未知機型";
             const key = rawModel.toUpperCase();
@@ -210,6 +212,7 @@
             return rawModel;
         }
 
+        // 根據型號代碼偵測品牌
         function detectBrand(modelCode) {
             const code = modelCode.toUpperCase();
             if (code.startsWith("SM-")) return "Samsung";
@@ -224,6 +227,7 @@
             return "Android";
         }
 
+        // 取得 Android 裝置的型號字串
         function getAndroidModel(ua) {
             const regex = /android.*;\s([^;]+)\sbuild/i;
             let match = ua.match(regex);
@@ -246,6 +250,7 @@
             return "Android裝置";
         }
 
+        // 取得裝置品牌和型號
         function getDeviceInfo() {
             const ua = navigator.userAgent;
             if (ua.includes("iPhone")) {
@@ -258,6 +263,7 @@
             }
         }
 
+        // 初始化 LIFF SDK 並取得使用者資訊
         async function initLiff() {
             try {
                 await liff.init({ liffId: LIFF_ID });
@@ -278,6 +284,7 @@
             }
         }
 
+        // 向 Google Apps Script 傳送抽獎資料
         async function sendData() {
             if (hasSentData) return;
             hasSentData = true;
@@ -302,10 +309,11 @@
                     resultDiv.innerHTML = `<div class="notice">你已經刮過囉！</div>`;
                 } else {
                     const prize = data.prize;
+                    // 請在這裡設定你的獎項圖片 URL
                     const images = {
-                        '天選獎S1': 'https://i.ibb.co/6PzL2nF/S1.png',
-                        '天選獎S2': 'https://i.ibb.co/V959X21/S2.png',
-                        '機會獎': 'https://i.ibb.co/8r8c6fT/A.png',
+                        '天選獎S1': 'https://i.ibb.co/L5hY52B/S1-prize.jpg', 
+                        '天選獎S2': 'https://i.ibb.co/6PzL2nF/S2-prize.jpg',
+                        '機會獎': 'https://i.ibb.co/6Pq931P/A.png',
                         '命運獎': 'https://i.ibb.co/YyLgT7c/B.png'
                     };
 
@@ -374,11 +382,11 @@
         function loadBackground() {
             const img = new Image();
             img.crossOrigin = 'anonymous';
-            img.src = 'https://i.ibb.co/2d1rP3W/BG.png'; // Updated background image URL
+            img.src = 'https://i.ibb.co/2d1rP3W/BG.png';
             img.onload = () => {
                 setCanvasSize();
                 bgCtx.drawImage(img, 0, 0, bgCanvas.width, bgCanvas.height);
-                initMask(); // 載入背景後再初始化遮罩
+                initMask();
             };
             img.onerror = () => {
                 resultDiv.innerHTML = '<div class="notice">背景圖片載入失敗，請檢查網址。</div>';
@@ -413,7 +421,7 @@
             if (!isDrawing) return;
             e.preventDefault();
             const { x, y } = getPos(e);
-            maskCtx.lineWidth = 80; // 刮除線條的粗度
+            maskCtx.lineWidth = 80;
             maskCtx.lineCap = 'round';
             maskCtx.lineJoin = 'round';
             maskCtx.globalCompositeOperation = 'destination-out';
@@ -440,13 +448,13 @@
             maskCanvas.addEventListener('touchmove', scratch, { passive: false });
             maskCanvas.addEventListener('touchend', endScratch);
         }
-        
+
         // 初始化
         window.addEventListener('resize', () => {
             setCanvasSize();
-            loadBackground(); // 畫面調整大小後重新載入背景
+            loadBackground();
         });
-        
+
         window.onload = () => {
             wrapper = document.getElementById('wrapper');
             bgCanvas = document.getElementById('bgCanvas');
@@ -456,7 +464,7 @@
             maskCtx = maskCanvas.getContext('2d');
 
             setCanvasSize();
-            loadBackground(); // 在網頁載入時載入背景
+            loadBackground();
             setupEventListeners();
             initLiff();
         };

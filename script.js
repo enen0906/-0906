@@ -1,25 +1,20 @@
+
 const LIFF_ID = '2007597530-o1xaVbZm';
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbqa2xiM8ZUvN8Izt5siIF4_AafygmWWni0Gtf59rCZCyovV4Sun-DFLonehWktxeOb/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxqa2xiM8ZUvN8Izt5siIF4_AafygmWWni0Gtf59rCZCyovV4Sun-DFLonehWktxeOb/exec';
 
-let userId = '未知';
-let deviceBrand = '未知';
-let deviceModel = '未知';
-let hasSentData = false;
-let prize = '';
-
-// Canvas 元素
 const wrapper = document.getElementById('wrapper');
 const bgCanvas = document.getElementById('bgCanvas');
 const maskCanvas = document.getElementById('maskCanvas');
 const bgCtx = bgCanvas.getContext('2d');
 const maskCtx = maskCanvas.getContext('2d');
-let isDrawing = false;
+const resultDiv = document.getElementById('result');
 
-// 文字元素
-const resultDiv = document.getElementById('resultDiv');
-const prizeText = document.getElementById('prizeText');
+let deviceBrand = '未知';
+let deviceModel = '未知';
+let userId = '未知';
+let hasSentData = false;
 
-// ===== 型號對照表 =====
+// 型號對照表，全部大寫 Key
 const modelMap = {
   // Galaxy S 系列
   "SM-G9800": "Galaxy S20",
@@ -40,6 +35,7 @@ const modelMap = {
   "SM-S9310": "Galaxy S25",
   "SM-S9360": "Galaxy S25+",
   "SM-S9380": "Galaxy S25 Ultra",
+
   // Galaxy Z 系列
   "SM-F7000": "Galaxy Z Flip",
   "SM-F9160": "Galaxy Z Fold2",
@@ -51,6 +47,7 @@ const modelMap = {
   "SM-F9460": "Galaxy Z Fold5",
   "SM-F7410": "Galaxy Z Flip6",
   "SM-F9560": "Galaxy Z Fold6",
+
   // Galaxy A 系列
   "SM-A5150": "Galaxy A51",
   "SM-A7150": "Galaxy A71",
@@ -71,46 +68,39 @@ const modelMap = {
   "SM-A3560": "Galaxy A35 5G",
   "SM-A5560": "Galaxy A55 5G",
   "SM-A1660": "Galaxy A16",
-  // Apple
-  "IPHONE": "Apple iPhone（型號未知）",
-  // Google Pixel
-  "PIXEL 7": "Google Pixel 7",
-  "PIXEL 7 PRO": "Google Pixel 7 Pro",
-  "PIXEL 8": "Google Pixel 8",
-  "PIXEL 8 PRO": "Google Pixel 8 Pro",
-  "PIXEL 9": "Google Pixel 9",
-  "PIXEL 9 PRO": "Google Pixel 9 Pro",
-  // OnePlus
-  "ONEPLUS 9": "OnePlus 9",
-  "ONEPLUS 10": "OnePlus 10",
-  "ONEPLUS 11": "OnePlus 11",
-  "ONEPLUS 13": "OnePlus 13",
-  // Sony
+
+  // 已有的機種
+  "iPhone": "Apple iPhone（型號未知）",
+  "Pixel 7": "Google Pixel 7",
+  "Pixel 7 Pro": "Google Pixel 7 Pro",
+  "Pixel 8": "Google Pixel 8",
+  "Pixel 8 Pro": "Google Pixel 8 Pro",
+  "Pixel 9": "Google Pixel 9",
+  "Pixel 9 Pro": "Google Pixel 9 Pro",
+  "OnePlus 9": "OnePlus 9",
+  "OnePlus 10": "OnePlus 10",
+  "OnePlus 11": "OnePlus Buds",
+  "OnePlus 13": "OnePlus 13",
   "XQ-DC72": "Sony Xperia 1 V",
   "XQ-DQ72": "Sony Xperia 5 V",
-  // Xiaomi / Redmi
   "23078PND5G": "Xiaomi 13T Pro",
   "22071212AG": "Xiaomi 12T Pro",
   "23021RAA2Y": "Redmi Note 12",
   "23090RA98G": "Redmi Note 13 Pro",
-  // ASUS
   "AI2205": "ASUS ROG Phone 6",
   "AI2401": "ASUS ROG Phone 8",
   "AI2302": "ASUS Zenfone 10",
-  // OPPO
   "CPH2491": "OPPO Reno10",
   "CPH2525": "OPPO Find X6",
-  // vivo
   "V2238": "vivo X90",
   "V2303": "vivo Y78",
-  // realme
   "RMX3820": "realme 11 Pro+",
   "RMX3866": "realme GT Neo5"
 };
 
-// ===== 型號與品牌偵測函數 =====
+
 function guessModelName(rawModel) {
-  if (!rawModel) return "未知機型";
+  if (!rawModel) return rawModel || "未知機型";
   const key = rawModel.toUpperCase();
   if (modelMap[key]) return modelMap[key];
   if (key.startsWith("SM-A")) return "Samsung Galaxy A 系列 " + rawModel;
@@ -141,148 +131,176 @@ function detectBrand(modelCode) {
   return "Android";
 }
 
+// 修正後的 Android 型號抓取，排除 wv
 function getAndroidModel(ua) {
   const regex = /android.*;\s([^;]+)\sbuild/i;
   let match = ua.match(regex);
   if (match && match[1]) {
     let model = match[1].trim();
-    if (model.toLowerCase() === 'wv') return "Android裝置";
+    if (model.toLowerCase() === 'wv') {
+      return "Android裝置";
+    }
     return model;
   }
   const regex2 = /android.*;\s([^;]+)\)/i;
   match = ua.match(regex2);
   if (match && match[1]) {
     let model = match[1].trim();
-    if (model.toLowerCase() === 'wv') return "Android裝置";
+    if (model.toLowerCase() === 'wv') {
+      return "Android裝置";
+    }
     return model;
   }
   return "Android裝置";
 }
-
-// ===== LIFF 初始化 =====
 async function initLiff() {
   await liff.init({ liffId: LIFF_ID });
-  if (!liff.isLoggedIn()) liff.login();
-  else {
-    try { userId = (await liff.getProfile()).userId || '未知'; }
-    catch(e){ console.error('無法取得 userId', e); }
-    detectDevice();
+  if (!liff.isLoggedIn()) {
+    liff.login();
+  } else {
+    try {
+      const profile = await liff.getProfile();
+      userId = profile.userId || '未知';
+    } catch (err) {
+      console.error('無法取得使用者 ID', err);
+    }
+    getDeviceInfo();
   }
 }
 
-function detectDevice() {
+function getDeviceInfo() {
   const ua = navigator.userAgent.toLowerCase();
-  if (ua.includes('iphone')) { deviceBrand='Apple'; deviceModel='iPhone'; }
-  else if (ua.includes('ipad')) { deviceBrand='Apple'; deviceModel='iPad'; }
-  else if (ua.includes('android')) {
-    deviceModel = getAndroidModel(ua);
-    deviceBrand = detectBrand(deviceModel);
-    deviceModel = guessModelName(deviceModel);
-  } else { deviceBrand='未知'; deviceModel='未知'; }
+  if (ua.includes('iphone')) {
+    deviceBrand = 'Apple';
+    deviceModel = 'iPhone';
+  } else if (ua.includes('ipad')) {
+    deviceBrand = 'Apple';
+    deviceModel = 'iPad';
+  } else if (ua.includes('android')) {
+    const rawModel = getAndroidModel(ua);
+    const modelCode = rawModel.toUpperCase();
+    deviceModel = guessModelName(modelCode);
+    deviceBrand = detectBrand(modelCode);
+  } else {
+    deviceBrand = '未知';
+    deviceModel = '未知';
+  }
 }
 
-// ===== 發送資料到 GAS =====
-async function sendDrawResult(prize){
-  if(hasSentData) return;
+function sendData(prize) {
+  if (hasSentData) return;
   hasSentData = true;
+
   const params = new URLSearchParams({
-    userId, deviceBrand, deviceModel,
-    action: 'draw',
-    timestamp: new Date().toISOString(),
-    prize
+    prize,
+    deviceBrand,
+    deviceModel,
+    userId,
+    timestamp: new Date().toISOString()
   });
-  try { await fetch(GAS_URL+'?'+params.toString()); }
-  catch(e){ console.error('無法回傳資料', e); }
+
+  fetch(`${GAS_URL}?${params.toString()}`)
+    .then(res => res.text())
+    .then(data => console.log('資料已送出', data))
+    .catch(err => console.error('送出失敗', err));
 }
 
-// ===== 抽獎邏輯 =====
-function drawPrize(){
-  const rand = Math.random();
-  if(rand < 4/303) return Math.random()<0.5?'天選獎S1':'天選獎S2';
-  else if(rand < 4/303 + 0.5*299/303) return '機會獎';
-  else return '命運獎';
+// 抽獎機率設定
+const rand = Math.random();
+let prize = '';
+if (rand < 4 / 303) {
+    prize = Math.random() < 0.5 ? '天選獎S1' : '天選獎S2';
+} else if (rand < 4 / 303 + 0.5 * 299 / 303) {
+    prize = '機會獎';
+} else {
+    prize = '命運獎';
 }
 
-// ===== 圖片對應 =====
+// 圖片對應
 const images = {
-  '天選獎S1':'https://i.postimg.cc/RCGKq4nk/6.png',
-  '天選獎S2':'https://i.postimg.cc/gkxjRNkf/5.png',
-  '機會獎':'https://i.postimg.cc/3xpwfNG1/3.png',
-  '命運獎':'https://i.postimg.cc/RFCV0TDp/2.png'
+    '天選獎S1': 'https://i.postimg.cc/RCGKq4nk/6.png',
+    '天選獎S2': 'https://i.postimg.cc/gkxjRNkf/5.png',
+    '機會獎': 'https://i.postimg.cc/3xpwfNG1/3.png',
+    '命運獎': 'https://i.postimg.cc/RFCV0TDp/2.png'
 };
 
-const img = new Image();
-img.crossOrigin='anonymous';
+let img = new Image();
+img.crossOrigin = 'anonymous';
+img.src = images[prize];
 
-// ===== 畫布設定 =====
-function setCanvasSize(){
+// 設定畫布大小
+function setCanvasSize() {
   const width = wrapper.clientWidth;
   const height = Math.floor(width * 1350 / 1080);
-  wrapper.style.height = height+'px';
+  wrapper.style.height = height + 'px';
   bgCanvas.width = maskCanvas.width = width;
   bgCanvas.height = maskCanvas.height = height;
 }
 
-// ===== 初始化遮罩 =====
-function initMask(){
-  maskCtx.globalCompositeOperation='source-over';
-  maskCtx.fillStyle='#999';
-  maskCtx.fillRect(0,0,maskCanvas.width,maskCanvas.height);
+// 初始化遮罩
+function initMask() {
+  maskCtx.fillStyle = '#999';
+  maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
 }
 
-// ===== 計算刮開比例 =====
-function checkScratchPercent(){
-  const imgData = maskCtx.getImageData(0,0,maskCanvas.width,maskCanvas.height).data;
-  let cleared=0;
-  for(let i=3;i<imgData.length;i+=4){ if(imgData[i]===0) cleared++; }
-  const percent = cleared/(maskCanvas.width*maskCanvas.height)*100;
-  if(percent>50){
-    prizeText.textContent=`🎉 恭喜你中了【${prize}】 🎉`;
-    resultDiv.style.display='flex';
-    maskCanvas.style.pointerEvents='none';
-    sendDrawResult(prize);
+// 計算刮開比例
+function checkScratchPercent() {
+    const imgData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height).data;
+    let cleared = 0;
+    for (let i = 3; i < imgData.length; i += 4) {
+        if (imgData[i] === 0) cleared++;
+    }
+    const percent = cleared / (maskCanvas.width * maskCanvas.height) * 100;
+    if (percent > 50) {
+        prizeText.textContent = `🎉 恭喜你中了【${prize}】 🎉`;
+        noticeText.style.display = 'block';
+        resultDiv.style.display = 'block';
+        maskCanvas.style.pointerEvents = 'none';
+    }
+}
+
+function getPos(e) {
+  const rect = maskCanvas.getBoundingClientRect();
+  if (e.touches && e.touches.length > 0) {
+    return {
+      x: e.touches[0].clientX - rect.left,
+      y: e.touches[0].clientY - rect.top
+    };
+  } else {
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
   }
 }
 
-// ===== 刮刮卡事件 =====
-function getPos(e){
-  const rect=maskCanvas.getBoundingClientRect();
-  if(e.touches && e.touches.length>0) return {x:e.touches[0].clientX-rect.left, y:e.touches[0].clientY-rect.top};
-  return {x:e.clientX-rect.left, y:e.clientY-rect.top};
-}
-
-function scratch(e){
-  if(!isDrawing) return;
+function scratch(e) {
+  if (!isDrawing) return;
   e.preventDefault();
-  const {x,y}=getPos(e);
-  maskCtx.globalCompositeOperation='destination-out';
+  const { x, y } = getPos(e);
+  maskCtx.globalCompositeOperation = 'destination-out';
   maskCtx.beginPath();
-  maskCtx.arc(x,y,50,0,Math.PI*2);
+  maskCtx.arc(x, y, 50, 0, Math.PI * 2);
   maskCtx.fill();
 }
 
-maskCanvas.addEventListener('mousedown', e=>{isDrawing=true; scratch(e);});
+maskCanvas.addEventListener('mousedown', (e) => { isDrawing = true; scratch(e); });
 maskCanvas.addEventListener('mousemove', scratch);
-maskCanvas.addEventListener('mouseup', ()=>{isDrawing=false; checkScratchPercent();});
-maskCanvas.addEventListener('mouseleave', ()=>{isDrawing=false;});
-maskCanvas.addEventListener('touchstart', e=>{isDrawing=true; scratch(e);},{passive:false});
-maskCanvas.addEventListener('touchmove', scratch,{passive:false});
-maskCanvas.addEventListener('touchend', ()=>{isDrawing=false; checkScratchPercent();});
+maskCanvas.addEventListener('mouseup', () => { isDrawing = false; checkScratchPercent(); });
+maskCanvas.addEventListener('mouseleave', () => { isDrawing = false; });
 
-// ===== 載入圖片 =====
-img.onload = ()=>{
+maskCanvas.addEventListener('touchstart', (e) => { isDrawing = true; scratch(e); }, { passive: false });
+maskCanvas.addEventListener('touchmove', scratch, { passive: false });
+maskCanvas.addEventListener('touchend', () => { isDrawing = false; checkScratchPercent(); });
+
+img.onload = () => {
   setCanvasSize();
-  bgCtx.drawImage(img,0,0,bgCanvas.width,bgCanvas.height);
+  bgCtx.drawImage(img, 0, 0, bgCanvas.width, bgCanvas.height);
   initMask();
 };
 
-window.addEventListener('resize', ()=>{
+window.addEventListener('resize', () => {
   setCanvasSize();
-  bgCtx.drawImage(img,0,0,bgCanvas.width,bgCanvas.height);
+  bgCtx.drawImage(img, 0, 0, bgCanvas.width, bgCanvas.height);
   initMask();
 });
-
-// ===== 初始化抽獎與載入圖片 =====
-prize = drawPrize();
-img.src = images[prize];
-initLiff();

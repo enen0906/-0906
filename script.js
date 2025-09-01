@@ -180,6 +180,7 @@ function sendData(prize) {
     deviceModel,
     userId,
     timestamp: new Date().toISOString()
+    action: 'draw'
   });
 
   fetch(`${GAS_URL}?${params.toString()}`)

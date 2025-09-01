@@ -1,24 +1,20 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
-  <title>⭐大學星生活⭐刮刮卡</title>
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<meta charset="UTF-8">
+<title>⭐大學星生活⭐刮刮卡</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
-  <h1>⭐大學星生活⭐</h1>
-  
-  <div id="wrapper">
-    <canvas id="bgCanvas"></canvas>
-    <canvas id="maskCanvas"></canvas>
+<div class="container">
+  <h1>刮刮卡活動</h1>
+  <div class="card-container">
+    <img id="card-bg" src="your-image.jpg" alt="卡片背景">
+    <canvas id="scratch-canvas"></canvas>
+    <div class="card-text" id="card-text">刮開看看你的獎品！</div>
   </div>
-
-  <div id="result">
-    <div id="prizeText"></div>
-    <div id="noticeText">請洽服務人員兌獎</div>
-  </div>
-
-  <script src="script.js"></script>
+</div>
+<script src="script.js"></script>
 </body>
 </html>

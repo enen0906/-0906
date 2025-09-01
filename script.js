@@ -220,7 +220,7 @@ if (rand < 4 / 303) {
 }
 
 const images = {
-    '天選獎S1': 'https://i.postimg.cc/yNmkxxYx/4.png',
+    '天選獎S1': 'https://i.postimg.cc/RCGKq4nk/6.png',
     '天選獎S2': 'https://i.postimg.cc/gkxjRNkf/5.png',
     '機會獎': 'https://i.postimg.cc/3xpwfNG1/3.png',
     '命運獎': 'https://i.postimg.cc/RFCV0TDp/2.png'

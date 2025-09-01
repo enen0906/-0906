@@ -19,6 +19,7 @@ h1 {
   margin: 0 auto;
   height: calc(100vw * 1.25);
   max-height: 1000px;
+  border: 2px solid #333;
 }
 
 /* 背景與遮罩畫布 */
@@ -28,31 +29,22 @@ h1 {
   left: 0;
   width: 100%;
   height: 100%;
-  border: 2px solid #333;
   touch-action: none;
   z-index: 1;
 }
 
-/* 結果訊息，全部靠下 */
+/* 結果訊息，放在畫布下方 */
 #result {
-  position: absolute;
-  bottom: 0;           /* 從畫布底部開始排列 */
-  left: 0;
-  width: 100%;
-  z-index: 3;          /* 高於 canvas */
-  pointer-events: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: none; /* 預設隱藏 */
+  margin-top: 20px; /* 與畫布間距 */
   text-align: center;
-  margin-bottom: 20px; /* 與畫布底部距離 */
 }
 
 #result .prize {
   font-size: 64px;
   font-weight: 700;
   color: #ff4500;
-  margin-bottom: 10px; /* 與下方通知文字距離 */
+  margin-bottom: 10px;
 }
 
 #result .notice {

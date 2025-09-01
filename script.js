@@ -1,5 +1,21 @@
-// ===== 型號對照表 =====
+const LIFF_ID = '2007597530-o1xaVbZm';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbz9nfhw-DxaLUeSyMnmdvF02SjtlOLwccZ8--bFr_zqCgGJyCV4AYIe8fiUf0Vt1-tv/exec';
+
+const wrapper = document.getElementById('wrapper');
+const bgCanvas = document.getElementById('bgCanvas');
+const maskCanvas = document.getElementById('maskCanvas');
+const bgCtx = bgCanvas.getContext('2d');
+const maskCtx = maskCanvas.getContext('2d');
+const resultDiv = document.getElementById('result');
+
+let deviceBrand = '未知';
+let deviceModel = '未知';
+let userId = '未知';
+let hasSentData = false;
+
+// 型號對照表，全部大寫 Key
 const modelMap = {
+  // Galaxy S 系列
   "SM-G9800": "Galaxy S20",
   "SM-G9860": "Galaxy S20+",
   "SM-G9880": "Galaxy S20 Ultra",
@@ -18,6 +34,8 @@ const modelMap = {
   "SM-S9310": "Galaxy S25",
   "SM-S9360": "Galaxy S25+",
   "SM-S9380": "Galaxy S25 Ultra",
+
+  // Galaxy Z 系列
   "SM-F7000": "Galaxy Z Flip",
   "SM-F9160": "Galaxy Z Fold2",
   "SM-F7110": "Galaxy Z Flip3",
@@ -28,6 +46,8 @@ const modelMap = {
   "SM-F9460": "Galaxy Z Fold5",
   "SM-F7410": "Galaxy Z Flip6",
   "SM-F9560": "Galaxy Z Fold6",
+
+  // Galaxy A 系列
   "SM-A5150": "Galaxy A51",
   "SM-A7150": "Galaxy A71",
   "SM-A3250": "Galaxy A32",
@@ -47,17 +67,19 @@ const modelMap = {
   "SM-A3560": "Galaxy A35 5G",
   "SM-A5560": "Galaxy A55 5G",
   "SM-A1660": "Galaxy A16",
-  "IPHONE": "Apple iPhone（型號未知）",
-  "PIXEL 7": "Google Pixel 7",
-  "PIXEL 7 PRO": "Google Pixel 7 Pro",
-  "PIXEL 8": "Google Pixel 8",
-  "PIXEL 8 PRO": "Google Pixel 8 Pro",
-  "PIXEL 9": "Google Pixel 9",
-  "PIXEL 9 PRO": "Google Pixel 9 Pro",
-  "ONEPLUS 9": "OnePlus 9",
-  "ONEPLUS 10": "OnePlus 10",
-  "ONEPLUS 11": "OnePlus 11",
-  "ONEPLUS 13": "OnePlus 13",
+
+  // 已有的機種
+  "iPhone": "Apple iPhone（型號未知）",
+  "Pixel 7": "Google Pixel 7",
+  "Pixel 7 Pro": "Google Pixel 7 Pro",
+  "Pixel 8": "Google Pixel 8",
+  "Pixel 8 Pro": "Google Pixel 8 Pro",
+  "Pixel 9": "Google Pixel 9",
+  "Pixel 9 Pro": "Google Pixel 9 Pro",
+  "OnePlus 9": "OnePlus 9",
+  "OnePlus 10": "OnePlus 10",
+  "OnePlus 11": "OnePlus Buds",
+  "OnePlus 13": "OnePlus 13",
   "XQ-DC72": "Sony Xperia 1 V",
   "XQ-DQ72": "Sony Xperia 5 V",
   "23078PND5G": "Xiaomi 13T Pro",
@@ -75,30 +97,23 @@ const modelMap = {
   "RMX3866": "realme GT Neo5"
 };
 
-// ===== LIFF 與裝置資訊 =====
-const LIFF_ID = '2007597530-o1xaVbZm';
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbz9nfhw-DxaLUeSyMnmdvF02SjtlOLwccZ8--bFr_zqCgGJyCV4AYIe8fiUf0Vt1-tv/exec';
 
-const wrapper = document.getElementById('wrapper');
-const bgCanvas = document.getElementById('bgCanvas');
-const maskCanvas = document.getElementById('maskCanvas');
-const bgCtx = bgCanvas.getContext('2d');
-const maskCtx = maskCanvas.getContext('2d');
-const resultDiv = document.getElementById('result');
-const prizeText = document.getElementById('prizeText');
-const noticeText = document.getElementById('noticeText');
-
-let deviceBrand = '未知';
-let deviceModel = '未知';
-let userId = '未知';
-let hasSentData = false;
-let isDrawing = false;
-
-// 型號轉換
 function guessModelName(rawModel) {
-  if (!rawModel) return "未知機型";
+  if (!rawModel) return rawModel || "未知機型";
   const key = rawModel.toUpperCase();
-  return modelMap[key] || rawModel;
+  if (modelMap[key]) return modelMap[key];
+  if (key.startsWith("SM-A")) return "Samsung Galaxy A 系列 " + rawModel;
+  if (key.startsWith("SM-S")) return "Samsung Galaxy S 系列 " + rawModel;
+  if (key.startsWith("SM-F")) return "Samsung Galaxy Z 系列 " + rawModel;
+  if (key.includes("IPHONE")) return "Apple iPhone";
+  if (key.includes("PIXEL")) return rawModel;
+  if (key.includes("ONEPLUS")) return rawModel;
+  if (key.includes("OPPO")) return rawModel;
+  if (key.includes("ASUS")) return rawModel;
+  if (key.includes("VIVO")) return rawModel;
+  if (key.includes("REALME")) return rawModel;
+  if (key.includes("XIAOMI") || key.includes("REDMI")) return rawModel;
+  return rawModel;
 }
 
 function detectBrand(modelCode) {
@@ -115,41 +130,46 @@ function detectBrand(modelCode) {
   return "Android";
 }
 
-// Android 型號抓取
+// 修正後的 Android 型號抓取，排除 wv
 function getAndroidModel(ua) {
   const regex = /android.*;\s([^;]+)\sbuild/i;
   let match = ua.match(regex);
   if (match && match[1]) {
     let model = match[1].trim();
-    if (model.toLowerCase() === 'wv') return "Android裝置";
+    if (model.toLowerCase() === 'wv') {
+      return "Android裝置";
+    }
     return model;
   }
   const regex2 = /android.*;\s([^;]+)\)/i;
   match = ua.match(regex2);
   if (match && match[1]) {
     let model = match[1].trim();
-    if (model.toLowerCase() === 'wv') return "Android裝置";
+    if (model.toLowerCase() === 'wv') {
+      return "Android裝置";
+    }
     return model;
   }
   return "Android裝置";
 }
 
-// 初始化 LIFF
+// 初始化 LIFF 並取得 userId
 async function initLiff() {
   await liff.init({ liffId: LIFF_ID });
-  if (!liff.isLoggedIn()) liff.login();
-  else {
+  if (!liff.isLoggedIn()) {
+    liff.login();
+  } else {
     try {
       const profile = await liff.getProfile();
       userId = profile.userId || '未知';
     } catch (err) {
-      console.error(err);
+      console.error('無法取得使用者 ID', err);
     }
     getDeviceInfo();
   }
 }
 
-// 判斷裝置
+// 取得裝置品牌與型號
 function getDeviceInfo() {
   const ua = navigator.userAgent.toLowerCase();
   if (ua.includes('iphone')) {
@@ -169,7 +189,7 @@ function getDeviceInfo() {
   }
 }
 
-// 回傳資料
+// 送資料到 Google Apps Script
 function sendData(prize) {
   if (hasSentData) return;
   hasSentData = true;
@@ -180,7 +200,6 @@ function sendData(prize) {
     deviceModel,
     userId,
     timestamp: new Date().toISOString()
-    action: 'draw'
   });
 
   fetch(`${GAS_URL}?${params.toString()}`)
@@ -189,25 +208,29 @@ function sendData(prize) {
     .catch(err => console.error('送出失敗', err));
 }
 
-// ===== 抽獎設定 =====
+// 抽獎機率設定
 const rand = Math.random();
 let prize = '';
-if (rand < 4 / 303) prize = Math.random() < 0.5 ? '天選獎S1' : '天選獎S2';
-else if (rand < 4 / 303 + 0.5 * 299 / 303) prize = '機會獎';
-else prize = '命運獎';
+if (rand < 4 / 303) {
+    prize = Math.random() < 0.5 ? '天選獎S1' : '天選獎S2';
+} else if (rand < 4 / 303 + 0.5 * 299 / 303) {
+    prize = '機會獎';
+} else {
+    prize = '命運獎';
+}
 
 const images = {
-  '天選獎S1': 'https://i.postimg.cc/RCGKq4nk/6.png',
-  '天選獎S2': 'https://i.postimg.cc/gkxjRNkf/5.png',
-  '機會獎': 'https://i.postimg.cc/3xpwfNG1/3.png',
-  '命運獎': 'https://i.postimg.cc/RFCV0TDp/2.png'
+    '天選獎S1': 'https://i.postimg.cc/yNmkxxYx/4.png',
+    '天選獎S2': 'https://i.postimg.cc/gkxjRNkf/5.png',
+    '機會獎': 'https://i.postimg.cc/3xpwfNG1/3.png',
+    '命運獎': 'https://i.postimg.cc/RFCV0TDp/2.png'
 };
-
+// 載入圖片
 let img = new Image();
 img.crossOrigin = 'anonymous';
 img.src = images[prize];
 
-// ===== 畫布設定 =====
+// 畫布大小設定
 function setCanvasSize() {
   const width = wrapper.clientWidth;
   const height = Math.floor(width * 1350 / 1080);
@@ -216,34 +239,48 @@ function setCanvasSize() {
   bgCanvas.height = maskCanvas.height = height;
 }
 
+// 初始化遮罩
 function initMask() {
   maskCtx.fillStyle = '#999';
   maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
 }
 
-// 計算刮開比例
+// 檢查刮開比例
 function checkScratchPercent() {
-  const imgData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height).data;
-  let cleared = 0;
-  for (let i = 3; i < imgData.length; i += 4) if (imgData[i] === 0) cleared++;
-  const percent = cleared / (maskCanvas.width * maskCanvas.height) * 100;
-  if (percent > 50) {
-    prizeText.textContent = `🎉 恭喜你中了【${prize}】 🎉`;
-    noticeText.style.display = 'block';
-    resultDiv.style.display = 'block';
-    maskCanvas.style.pointerEvents = 'none';
-    sendData(prize);
+    const imgData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height).data;
+    let cleared = 0;
+    for (let i = 3; i < imgData.length; i += 4) {
+        if (imgData[i] === 0) cleared++;
+    }
+    const percent = cleared / (maskCanvas.width * maskCanvas.height) * 100;
+    if (percent > 50) {
+        resultDiv.innerHTML = `
+            <div class="prize">🎉 恭喜你中了【${prize}】 🎉</div>
+            <div class="notice" style="color:#d60000; font-weight:bold; font-size:70px;">請洽服務人員兌獎</div>
+        `;
+        resultDiv.style.display = 'block';
+        maskCanvas.style.pointerEvents = 'none';
+        sendData(prize);
+    }
+}
+
+let isDrawing = false;
+
+function getPos(e) {
+  const rect = maskCanvas.getBoundingClientRect();
+  if (e.touches && e.touches.length > 0) {
+    return {
+      x: e.touches[0].clientX - rect.left,
+      y: e.touches[0].clientY - rect.top
+    };
+  } else {
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
   }
 }
 
-// 取得座標
-function getPos(e) {
-  const rect = maskCanvas.getBoundingClientRect();
-  if (e.touches && e.touches.length > 0) return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
-  else return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-}
-
-// 刮刮卡動作
 function scratch(e) {
   if (!isDrawing) return;
   e.preventDefault();
@@ -254,18 +291,34 @@ function scratch(e) {
   maskCtx.fill();
 }
 
-maskCanvas.addEventListener('mousedown', (e) => { isDrawing = true; scratch(e); });
+maskCanvas.addEventListener('mousedown', (e) => {
+  isDrawing = true;
+  scratch(e);
+});
 maskCanvas.addEventListener('mousemove', scratch);
-maskCanvas.addEventListener('mouseup', () => { isDrawing = false; checkScratchPercent(); });
-maskCanvas.addEventListener('mouseleave', () => { isDrawing = false; });
-maskCanvas.addEventListener('touchstart', (e) => { isDrawing = true; scratch(e); }, { passive: false });
+maskCanvas.addEventListener('mouseup', () => {
+  isDrawing = false;
+  checkScratchPercent();
+});
+maskCanvas.addEventListener('mouseleave', () => {
+  isDrawing = false;
+});
+
+maskCanvas.addEventListener('touchstart', (e) => {
+  isDrawing = true;
+  scratch(e);
+}, { passive: false });
 maskCanvas.addEventListener('touchmove', scratch, { passive: false });
-maskCanvas.addEventListener('touchend', () => { isDrawing = false; checkScratchPercent(); });
+maskCanvas.addEventListener('touchend', () => {
+  isDrawing = false;
+  checkScratchPercent();
+});
 
 img.onload = () => {
   setCanvasSize();
   bgCtx.drawImage(img, 0, 0, bgCanvas.width, bgCanvas.height);
   initMask();
+  initLiff();
 };
 
 window.addEventListener('resize', () => {
@@ -273,6 +326,3 @@ window.addEventListener('resize', () => {
   bgCtx.drawImage(img, 0, 0, bgCanvas.width, bgCanvas.height);
   initMask();
 });
-
-// 啟動 LIFF
-initLiff();

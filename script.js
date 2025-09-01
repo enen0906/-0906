@@ -182,7 +182,10 @@ function sendData(prize) {
     timestamp: new Date().toISOString()
   });
 
-  fetch(`${GAS_URL}?${params.toString()}`)
+  const fullUrl = `${GAS_URL}?${params.toString()}`;
+  console.log("送出的 URL:", fullUrl);  // 🔍 印出 URL
+
+  fetch(fullUrl)
     .then(res => res.text())
     .then(data => console.log('資料已送出', data))
     .catch(err => console.error('送出失敗', err));

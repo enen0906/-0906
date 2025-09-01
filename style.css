@@ -1,52 +1,37 @@
 body {
-  text-align: center;
-  margin: 50px 0;
+  margin: 0;
   font-family: sans-serif;
-  background-color: #f5f5f5;
-}
-
-h1 {
-  font-size: 48px;
-  color: #ff4500;
-  font-weight: bold;
-  margin-bottom: 20px;
-  text-shadow: 1px 1px 2px #a00;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f0f0f0;
 }
 
 #wrapper {
   position: relative;
-  width: 100vw;
-  max-width: 800px;
-  margin: 0 auto;
-  border: 2px solid #333;
-  background-color: #fff;
+  max-width: 500px; /* 固定最大寬度 */
+  width: 100%;
+  margin: 20px auto;
+  aspect-ratio: 1080 / 1350; /* 固定比例 */
 }
 
-#wrapper canvas {
+canvas {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
+  width: 100%;  /* 保持比例縮放 */
   height: 100%;
-  touch-action: none;
-  z-index: 1;
+  display: block;
 }
 
 #result {
-  display: none;
-  margin-top: 20px;
   text-align: center;
-}
-
-#prizeText {
-  font-size: 48px;
-  font-weight: bold;
-  color: #e60000;
-  margin-bottom: 10px;
+  margin-top: 20px;
+  display: none;
 }
 
 #noticeText {
-  font-size: 36px;
-  font-weight: bold;
-  color: #d60000;
+  display: none;
+  font-size: 14px;
+  color: #555;
 }

@@ -1,46 +1,52 @@
 body {
-  font-family: Arial, sans-serif;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  min-height: 100vh;
-  background: #f0f0f0;
-}
-
-.container {
   text-align: center;
+  margin-top: 50px;
+  font-family: sans-serif;
 }
 
-.card-container {
+h1 {
+  font-size: 48px;
+  color: #ff4500;
+  font-weight: bold;
+  margin-bottom: 20px;
+  text-shadow: 1px 1px 2px #a00;
+}
+
+#wrapper {
   position: relative;
-  width: 300px;
-  height: 400px;
+  width: 100vw;
+  max-width: 800px;
+  margin: 0 auto;
+  height: calc(100vw * 1.25);
+  max-height: 1000px;
+  border: 2px solid #333;
 }
 
-#card-bg {
-  width: 100%;
-  height: 100%;
-  display: block;
-  border-radius: 16px;
-}
-
-#scratch-canvas {
+#wrapper canvas {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  border-radius: 16px;
+  touch-action: none;
+  z-index: 1;
 }
 
-.card-text {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 20px;
+#result {
+  display: none; /* 預設隱藏 */
+  margin-top: 20px;
+  text-align: center; /* 文字置中 */
+}
+
+#prizeText {
+  font-size: 64px;
   font-weight: bold;
-  color: #ff0000;
-  pointer-events: none;
+  color: #e60000;
+}
+
+#noticeText {
+  font-size: 50px;
+  font-weight: bold;
+  color: #d60000;
+  margin-top: 10px; /* 和中獎訊息間距 */
 }

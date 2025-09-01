@@ -33,31 +33,30 @@ h1 {
   z-index: 1;
 }
 
-/* 結果訊息，分開上下 */
+/* 結果訊息，全部靠下 */
 #result {
   position: absolute;
-  top: 0;
+  bottom: 0;           /* 從畫布底部開始排列 */
   left: 0;
   width: 100%;
-  height: 100%;
-  z-index: 3; /* 高於 canvas */
+  z-index: 3;          /* 高於 canvas */
   pointer-events: none;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start; /* 從上方開始排列 */
   text-align: center;
+  margin-bottom: 20px; /* 與畫布底部距離 */
 }
 
 #result .prize {
   font-size: 64px;
-  margin-top: 40%; /* 調整文字到畫布中間 */
+  font-weight: 700;
+  color: #ff4500;
+  margin-bottom: 10px; /* 與下方通知文字距離 */
 }
 
 #result .notice {
   font-size: 50px;
   color: #e60000;
   font-weight: 700;
-  margin-top: auto; /* 自動推到最下方 */
-  margin-bottom: 10px; /* 與畫布底部距離 */
 }

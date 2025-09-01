@@ -179,7 +179,7 @@ function sendData(prize) {
     deviceBrand,
     deviceModel,
     userId,
-    timestamp: new Date().toISOString(),
+    timestamp: new Date().toISOString()
     action: 'draw'
   });
 
@@ -210,7 +210,8 @@ img.src = images[prize];
 // ===== 畫布設定 =====
 function setCanvasSize() {
   const width = wrapper.clientWidth;
-  const height = wrapper.clientHeight; // 🔥 直接用 wrapper 的高度
+  const height = Math.floor(width * 1350 / 1080);
+  wrapper.style.height = height + 'px';
   bgCanvas.width = maskCanvas.width = width;
   bgCanvas.height = maskCanvas.height = height;
 }

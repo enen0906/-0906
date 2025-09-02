@@ -34,13 +34,9 @@ const bgCtx = bgCanvas.getContext('2d');
 const maskCtx = maskCanvas.getContext('2d');
 const resultDiv = document.getElementById('result');
 
-let deviceBrand = '未知';
-let deviceModel = '未知';
-let userId = '未知';
-let hasSentData = false;
-let prize = '';
+let deviceBrand='未知', deviceModel='未知', userId='未知';
+let prize='', hasSentData=false;
 
-// 圖片對應獎項
 const images = {
   '天選獎S1':'https://i.postimg.cc/RCGKq4nk/6.png',
   '天選獎S2':'https://i.postimg.cc/gkxjRNkf/5.png',
@@ -49,7 +45,18 @@ const images = {
   '無獎項':'https://i.postimg.cc/3xpwfNG1/3.png'
 };
 
-// --- 型號偵測 ---
+// --- LIFF 登入與抓使用者 ID ---
+async function initLiff(){
+  await liff.init({liffId:LIFF_ID});
+  if(!liff.isLoggedIn()) liff.login();
+  else{
+    try{ const profile=await liff.getProfile(); userId=profile.userId||'未知'; } 
+    catch(err){console.error('無法取得使用者ID',err);}
+    getDeviceInfo();
+    await checkDrawStatus();
+  }
+}
+
 function getDeviceInfo(){
   const ua=navigator.userAgent.toLowerCase();
   if(ua.includes('iphone')){ deviceBrand='Apple'; deviceModel='iPhone'; }
@@ -58,21 +65,23 @@ function getDeviceInfo(){
   else{ deviceBrand='未知'; deviceModel='未知'; }
 }
 
-// --- LIFF 登入 ---
-async function initLiff(){
-  await liff.init({liffId:LIFF_ID});
-  if(!liff.isLoggedIn()) liff.login();
-  else{
-    try{ const profile=await liff.getProfile(); userId=profile.userId||'未知'; } 
-    catch(err){console.error('無法取得使用者ID',err);}
-    getDeviceInfo();
-    setCanvasSize();
-    bgCtx.drawImage(img,0,0,bgCanvas.width,bgCanvas.height);
-    initMask();
+// --- 檢查是否已抽過 ---
+async function checkDrawStatus(){
+  try{
+    const resp = await fetch(`${GAS_URL}?action=check_draw&userId=${userId}`);
+    const data = await resp.json();
+    if(data.hasDrawn){
+      prize='已抽過';
+      showResult('已抽過');
+    } else {
+      prize=''; // 等刮完再抽
+    }
+  } catch(e){
+    console.error('檢查抽獎狀態失敗',e);
   }
 }
 
-// --- 畫布設定 ---
+// --- 畫布初始化 ---
 function setCanvasSize(){
   const width = wrapper.clientWidth;
   const height = Math.floor(width*1350/1080);
@@ -84,15 +93,6 @@ function setCanvasSize(){
 function initMask(){
   maskCtx.fillStyle='#999';
   maskCtx.fillRect(0,0,maskCanvas.width,maskCanvas.height);
-}
-
-// --- 前端抽獎邏輯 ---
-function drawPrizeLocally(){
-  // 天選獎 1/303 機率
-  const rand = Math.random();
-  if(rand < 1/303) return Math.random()<0.5?'天選獎S1':'天選獎S2';
-  // 機會獎 / 命運獎 50%
-  return Math.random()<0.5?'機會獎':'命運獎';
 }
 
 // --- 刮刮卡邏輯 ---
@@ -118,27 +118,57 @@ function checkScratchPercent(){
   let cleared=0;
   for(let i=3;i<imgData.length;i+=4) if(imgData[i]===0) cleared++;
   if(cleared/(maskCanvas.width*maskCanvas.height) > 0.5){
-    prize = drawPrizeLocally();
-    showResult(prize);
-    sendData(prize);
+    if(!prize || prize===''){ // 刮完才抽獎
+      drawPrizeFromGAS();
+    }
   }
 }
 
+// --- 抽獎 ---
+async function drawPrizeFromGAS(){
+  try{
+    const resp = await fetch(`${GAS_URL}?action=draw_prize&userId=${userId}`);
+    const data = await resp.json();
+    prize = data.prize || '無獎項';
+    const imgSrc = images[prize];
+    const imgObj = new Image();
+    imgObj.crossOrigin='anonymous';
+    imgObj.onload = ()=>{
+      bgCtx.clearRect(0,0,bgCanvas.width,bgCanvas.height);
+      bgCtx.drawImage(imgObj,0,0,bgCanvas.width,bgCanvas.height);
+      showResult(prize);
+    };
+    imgObj.src = imgSrc;
+  } catch(e){
+    console.error('抽獎失敗',e);
+    prize='無獎項';
+    showResult(prize);
+  }
+}
+
+// --- 顯示結果 ---
 function showResult(prizeText){
-  resultDiv.innerHTML = `<div class="prize">🎉 恭喜你中了【${prizeText}】 🎉</div>
-    <div class="notice">請洽服務人員兌獎</div>`;
+  resultDiv.innerHTML = `<div class="prize">🎉 ${prizeText==='已抽過'?prizeText:`恭喜你中了【${prizeText}】`} 🎉</div>
+    <div class="notice">${prizeText==='已抽過'?'':'請洽服務人員兌獎'}</div>`;
   resultDiv.style.display='block';
   maskCanvas.style.pointerEvents='none';
-  bgCtx.drawImage(img,0,0,bgCanvas.width,bgCanvas.height); // 確保底圖顯示
+  if(prizeText!=='已抽過') sendData(prizeText);
 }
 
 // --- 送資料到 GAS ---
 function sendData(prizeText){
   if(hasSentData) return;
   hasSentData=true;
-  const params = new URLSearchParams({action:'record_win', prize:prizeText, deviceBrand, deviceModel, userId});
+  const params = new URLSearchParams({
+    action:'record_win',
+    prize:prizeText,
+    deviceBrand,
+    deviceModel,
+    userId
+  });
   fetch(GAS_URL,{method:'POST',body:params})
-    .then(res=>res.text()).then(data=>console.log('資料已送出',data))
+    .then(res=>res.json())
+    .then(data=>console.log('資料已送出',data))
     .catch(e=>console.error(e));
 }
 
@@ -151,14 +181,19 @@ maskCanvas.addEventListener('touchstart',e=>{isDrawing=true;scratch(e);},{passiv
 maskCanvas.addEventListener('touchmove',scratch,{passive:false});
 maskCanvas.addEventListener('touchend',()=>{isDrawing=false; checkScratchPercent();});
 
-// --- 載入圖片 ---
-const img=new Image();
-img.crossOrigin='anonymous';
-img.src='https://i.postimg.cc/RFCV0TDp/2.png'; // 預設底圖
-img.onload=()=>{ setCanvasSize(); bgCtx.drawImage(img,0,0,bgCanvas.width,bgCanvas.height); initMask(); };
-window.addEventListener('resize',()=>{ setCanvasSize(); bgCtx.drawImage(img,0,0,bgCanvas.width,bgCanvas.height); initMask(); });
-
 // --- 初始化 ---
+window.addEventListener('resize',()=>{
+  setCanvasSize();
+  if(prize && prize!=='已抽過'){
+    const imgObj = new Image();
+    imgObj.src = images[prize];
+    imgObj.onload = ()=> bgCtx.drawImage(imgObj,0,0,bgCanvas.width,bgCanvas.height);
+  }
+  initMask();
+});
+
+setCanvasSize();
+initMask();
 initLiff();
 </script>
 </body>

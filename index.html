@@ -11,7 +11,7 @@
             margin: 0;
             padding: 0;
             background: #fafafa;
-            font-family: sans-serif;
+            font-family: 'Inter', sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -19,7 +19,7 @@
         }
 
         h1 {
-            font-size: 42px;
+            font-size: clamp(24px, 5vw, 42px);
             color: #ff4500;
             font-weight: bold;
             margin: 20px 0;
@@ -44,30 +44,23 @@
             height: 100%;
         }
 
-        #result {
-            position: absolute;
-            top: 0;
-            left: 0;
+        #message-container {
             width: 100%;
-            height: 100%;
-            display: flex;
+            max-width: 500px;
+            padding: 20px;
             text-align: center;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            z-index: 3;
-            /* 隱藏結果區塊，直到需要顯示時 */
-            display: none; 
+            box-sizing: border-box;
         }
-
-        #result .prize {
-            font-size: 48px;
+        
+        .prize-text {
+            font-size: clamp(28px, 6vw, 48px);
             font-weight: 700;
             color: #c00;
+            margin-bottom: 10px;
         }
 
-        #result .notice {
-            font-size: 32px;
+        .notice-text {
+            font-size: clamp(18px, 4vw, 32px);
             color: #e60000;
             font-weight: 700;
         }
@@ -90,7 +83,10 @@
     <div id="wrapper">
         <canvas id="bgCanvas"></canvas>
         <canvas id="maskCanvas"></canvas>
-        <div id="result"></div>
+    </div>
+    <div id="message-container">
+        <!-- 訊息將在此顯示 -->
+        <div id="status-message" class="loading-text">正在確認您的參加資格...</div>
     </div>
     
     <script>
@@ -104,7 +100,8 @@
         const maskCanvas = document.getElementById('maskCanvas');
         const bgCtx = bgCanvas.getContext('2d');
         const maskCtx = maskCanvas.getContext('2d');
-        const resultDiv = document.getElementById('result');
+        const statusMessageDiv = document.getElementById('status-message');
+        const messageContainer = document.getElementById('message-container');
 
         // 狀態變數
         let isDrawing = false;
@@ -217,30 +214,30 @@
                 }
             } catch (err) {
                 console.error('LIFF 初始化失敗', err);
-                resultDiv.innerHTML = '<div class="notice">LIFF 初始化失敗，請確認 LIFF ID。</div>';
-                resultDiv.style.display = 'flex';
+                statusMessageDiv.className = 'notice-text';
+                statusMessageDiv.textContent = 'LIFF 初始化失敗，請確認 LIFF ID。';
             }
         }
         
         // 檢查使用者是否已參加過抽獎
         async function checkIfUserHasDrawn() {
-            resultDiv.innerHTML = '<div class="loading-text">正在確認您的參加資格...</div>';
-            resultDiv.style.display = 'flex';
+            statusMessageDiv.textContent = '正在確認您的參加資格...';
             try {
-                // 向 GAS 發送查詢請求
                 const res = await fetch(`${GAS_URL}?action=check_draw&userId=${userId}`);
                 const data = await res.json();
                 
                 if (data.hasDrawn) {
-                    resultDiv.innerHTML = '<div class="prize">⚠️ 您已參加過抽獎</div>';
+                    statusMessageDiv.className = 'prize-text';
+                    statusMessageDiv.textContent = '⚠️ 您已參加過抽獎';
                     maskCanvas.style.pointerEvents = 'none';
                 } else {
-                    resultDiv.style.display = 'none'; // 隱藏載入訊息
+                    statusMessageDiv.textContent = '請刮開卡片以顯示結果...';
                     loadPrize();
                 }
             } catch (err) {
                 console.error('檢查資格失敗', err);
-                resultDiv.innerHTML = '<div class="notice">檢查資格失敗，請再試一次。</div>';
+                statusMessageDiv.className = 'notice-text';
+                statusMessageDiv.textContent = '檢查資格失敗，請再試一次。';
             }
         }
 
@@ -254,8 +251,8 @@
                 img.src = images[prize];
             } catch (err) {
                 console.error('取得獎品失敗', err);
-                resultDiv.innerHTML = '<div class="notice">取得獎品失敗，請重新整理。</div>';
-                resultDiv.style.display = 'flex';
+                statusMessageDiv.className = 'notice-text';
+                statusMessageDiv.textContent = '取得獎品失敗，請重新整理。';
             }
         }
 
@@ -301,8 +298,7 @@
             }
             const percent = cleared / (maskCanvas.width * maskCanvas.height) * 100;
             if (percent > 50) {
-                resultDiv.innerHTML = `<div class="prize">🎉 恭喜你中了【${prize}】 🎉</div><div class="notice">請洽服務人員兌獎</div>`;
-                resultDiv.style.display = 'flex';
+                statusMessageDiv.innerHTML = `<div class="prize-text">🎉 恭喜你中了【${prize}】 🎉</div><div class="notice-text">請洽服務人員兌獎</div>`;
                 maskCanvas.style.pointerEvents = 'none';
                 sendData(prize);
             }
@@ -322,13 +318,13 @@
                 timestamp: new Date().toISOString()
             });
             
-            // 這裡修正了錯誤，確保資料正確傳送並記錄
             try {
                 const res = await fetch(`${GAS_URL}?${params.toString()}`);
                 const data = await res.json();
                 console.log('GAS 回應:', data);
             } catch (err) {
                 console.error('資料送出失敗', err);
+                hasSentData = false; // 如果失敗，允許重試
             }
         }
 

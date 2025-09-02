@@ -1,217 +1,176 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🌟大學星生活🌟刮刮卡</title>
-  <style>
-    body { margin:0; padding:0; font-family: Arial,sans-serif; background:#f8f8f8; text-align:center; }
-    h1 { margin:15px 0; color:#333; font-size:clamp(20px,5vw,32px);}
-    #wrapper { position:relative; display:inline-block; width:95vw; max-width:400px; margin:auto;}
-    canvas { border:2px solid #ccc; border-radius:12px; display:block; width:100%; height:auto;}
-    #result { margin-top:15px; font-size:clamp(16px,4vw,22px); color:#333; font-weight:bold; display:none;}
-    .prize { font-size:clamp(24px,6vw,40px); font-weight:700; color:#c00; margin-bottom:6px; white-space:nowrap;}
-    .notice { font-size:clamp(14px,3.5vw,18px); color:#e60000; font-weight:500;}
-  </style>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>🌟大學星生活🌟刮刮卡</title>
+<style>
+  body { margin:0; padding:0; font-family:Arial,sans-serif; background:#f8f8f8; text-align:center; }
+  h1 { margin:15px 0; color:#333; font-size:clamp(20px,5vw,32px); }
+  #wrapper { position:relative; display:inline-block; width:95vw; max-width:400px; margin:auto; }
+  canvas { border:2px solid #ccc; border-radius:12px; display:block; width:100%; height:auto; }
+  #result { margin-top:15px; font-size:clamp(16px,4vw,22px); color:#333; font-weight:bold; display:none; }
+  .prize { font-size:clamp(24px,6vw,40px); font-weight:700; color:#c00; margin-bottom:6px; white-space:nowrap; }
+  .notice { font-size:clamp(14px,3.5vw,18px); color:#e60000; font-weight:500; }
+</style>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
-  <h1>🌟大學星生活🌟</h1>
-  <div id="wrapper">
-    <canvas id="bgCanvas"></canvas>
-    <canvas id="maskCanvas" style="position:absolute;top:0;left:0;"></canvas>
-  </div>
-  <div id="result">刮開看看你的獎項！</div>
+<h1>🌟大學星生活🌟</h1>
+<div id="wrapper">
+  <canvas id="bgCanvas"></canvas>
+  <canvas id="maskCanvas" style="position:absolute;top:0;left:0;"></canvas>
+</div>
+<div id="result">刮開看看你的獎項！</div>
 
-  <script>
-    const LIFF_ID = '2007597530-o1xaVbZm';
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbz9nfhw-DxaLUeSyMnmdvF02SjtlOLwccZ8--bFr_zqCgGJyCV4AYIe8fiUf0Vt1-tv/exec';
+<script>
+const LIFF_ID = '2007597530-o1xaVbZm';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbz9nfhw-DxaLUeSyMnmdvF02SjtlOLwccZ8--bFr_zqCgGJyCV4AYIe8fiUf0Vt1-tv/exec';
 
-    const wrapper = document.getElementById('wrapper');
-    const bgCanvas = document.getElementById('bgCanvas');
-    const maskCanvas = document.getElementById('maskCanvas');
-    const bgCtx = bgCanvas.getContext('2d');
-    const maskCtx = maskCanvas.getContext('2d');
-    const resultDiv = document.getElementById('result');
+const wrapper = document.getElementById('wrapper');
+const bgCanvas = document.getElementById('bgCanvas');
+const maskCanvas = document.getElementById('maskCanvas');
+const bgCtx = bgCanvas.getContext('2d');
+const maskCtx = maskCanvas.getContext('2d');
+const resultDiv = document.getElementById('result');
 
-    let userId = '未知';
-    let deviceBrand = '未知';
-    let deviceModel = '未知';
-    let prize = '';
-    let hasSentData = false;
+let deviceBrand = '未知';
+let deviceModel = '未知';
+let userId = '未知';
+let hasSentData = false;
+let prize = '';
 
-    const modelMap = {
-      /* 這裡保留你前面那份完整型號對照表 */
-    };
+const images = {
+  '天選獎S1':'https://i.postimg.cc/RCGKq4nk/6.png',
+  '天選獎S2':'https://i.postimg.cc/gkxjRNkf/5.png',
+  '機會獎':'https://i.postimg.cc/3xpwfNG1/3.png',
+  '命運獎':'https://i.postimg.cc/RFCV0TDp/2.png',
+  '無獎項':'https://i.postimg.cc/3xpwfNG1/3.png'
+};
 
-    function guessModelName(rawModel) {
-      if (!rawModel) return "未知機型";
-      const key = rawModel.toUpperCase();
-      return modelMap[key] || rawModel;
+// --- 型號偵測函式 ---
+function guessModelName(rawModel){return rawModel||"未知機型";}
+function detectBrand(modelCode){return "Android";} // 可擴展
+function getAndroidModel(ua){return "Android裝置";}
+
+// --- LIFF 登入與抓使用者 ID ---
+async function initLiff(){
+  await liff.init({liffId:LIFF_ID});
+  if(!liff.isLoggedIn()) liff.login();
+  else{
+    try{ const profile=await liff.getProfile(); userId=profile.userId||'未知'; } 
+    catch(err){console.error('無法取得使用者ID',err);}
+    getDeviceInfo();
+    await checkDrawAndInitPrize();
+  }
+}
+
+function getDeviceInfo(){
+  const ua=navigator.userAgent.toLowerCase();
+  if(ua.includes('iphone')){ deviceBrand='Apple'; deviceModel='iPhone'; }
+  else if(ua.includes('ipad')){ deviceBrand='Apple'; deviceModel='iPad'; }
+  else if(ua.includes('android')){ deviceBrand='Android'; deviceModel='Android裝置'; }
+  else{ deviceBrand='未知'; deviceModel='未知'; }
+}
+
+// --- 檢查是否已抽過 + 抽獎 ---
+async function checkDrawAndInitPrize(){
+  try{
+    const respCheck = await fetch(`${GAS_URL}?action=check_draw&userId=${userId}`);
+    const dataCheck = await respCheck.json();
+    if(dataCheck.hasDrawn){
+      prize='已抽過';
+      showResult('已抽過');
+      return;
     }
+    // 呼叫 GAS 抽獎
+    const respDraw = await fetch(`${GAS_URL}?action=draw_prize&userId=${userId}`);
+    const dataDraw = await respDraw.json();
+    prize = dataDraw.prize || '無獎項';
+    img.src = images[prize];
+  }catch(e){ console.error('抽獎失敗',e); prize='無獎項'; img.src = images[prize]; }
+}
 
-    function detectBrand(modelCode) {
-      const code = modelCode.toUpperCase();
-      if (code.startsWith("SM-")) return "Samsung";
-      if (code.includes("IPHONE")) return "Apple";
-      if (code.includes("PIXEL")) return "Google";
-      if (code.includes("ONEPLUS")) return "OnePlus";
-      if (code.includes("OPPO")) return "OPPO";
-      if (code.includes("ASUS")) return "ASUS";
-      if (code.includes("VIVO")) return "vivo";
-      if (code.includes("REALME")) return "realme";
-      if (code.includes("XIAOMI") || code.includes("REDMI")) return "Xiaomi";
-      return "Android";
-    }
+// --- 畫布設定 ---
+function setCanvasSize(){
+  const width = wrapper.clientWidth;
+  const height = Math.floor(width*1350/1080);
+  wrapper.style.height = height+'px';
+  bgCanvas.width = maskCanvas.width = width;
+  bgCanvas.height = maskCanvas.height = height;
+}
 
-    function getAndroidModel(ua) {
-      const regex = /android.*;\s([^;]+)\sbuild/i;
-      let match = ua.match(regex);
-      if (match && match[1]) return match[1].trim();
-      return "Android裝置";
-    }
+function initMask(){
+  maskCtx.fillStyle='#999';
+  maskCtx.fillRect(0,0,maskCanvas.width,maskCanvas.height);
+}
 
-    async function initLiff() {
-      await liff.init({ liffId: LIFF_ID });
-      if (!liff.isLoggedIn()) liff.login();
-      else {
-        try { const profile = await liff.getProfile(); userId = profile.userId || '未知'; } 
-        catch(e){ console.error(e); }
-        getDeviceInfo();
-        checkDrawStatus();
-      }
-    }
+// --- 刮刮卡邏輯 ---
+let isDrawing=false;
+function getPos(e){
+  const rect=maskCanvas.getBoundingClientRect();
+  if(e.touches && e.touches.length>0) return {x:e.touches[0].clientX-rect.left, y:e.touches[0].clientY-rect.top};
+  else return {x:e.clientX-rect.left, y:e.clientY-rect.top};
+}
 
-    function getDeviceInfo() {
-      const ua = navigator.userAgent.toLowerCase();
-      if (ua.includes('iphone')) { deviceBrand='Apple'; deviceModel='iPhone'; }
-      else if (ua.includes('ipad')) { deviceBrand='Apple'; deviceModel='iPad'; }
-      else if (ua.includes('android')) {
-        const rawModel = getAndroidModel(ua);
-        const code = rawModel.toUpperCase();
-        deviceModel = guessModelName(code);
-        deviceBrand = detectBrand(code);
-      }
-    }
+function scratch(e){
+  if(!isDrawing) return;
+  e.preventDefault();
+  const {x,y}=getPos(e);
+  maskCtx.globalCompositeOperation='destination-out';
+  maskCtx.beginPath();
+  maskCtx.arc(x,y,50,0,Math.PI*2);
+  maskCtx.fill();
+}
 
-    async function checkDrawStatus() {
-      const params = new URLSearchParams({ action:'check_draw', userId });
-      const res = await fetch(`${GAS_URL}?${params.toString()}`);
-      const data = await res.json();
-      if (data.hasDrawn) {
-        resultDiv.innerHTML = `<div class="notice">您已抽過獎，無法重複抽取！</div>`;
-        resultDiv.style.display='block';
-        maskCanvas.style.pointerEvents='none';
-      } else {
-        drawPrize();
-      }
-    }
+function checkScratchPercent(){
+  const imgData=maskCtx.getImageData(0,0,maskCanvas.width,maskCanvas.height).data;
+  let cleared=0;
+  for(let i=3;i<imgData.length;i+=4) if(imgData[i]===0) cleared++;
+  if(cleared/(maskCanvas.width*maskCanvas.height) > 0.5) showResult(prize);
+}
 
-    async function drawPrize() {
-      const params = new URLSearchParams({ action:'draw_prize', userId });
-      const res = await fetch(`${GAS_URL}?${params.toString()}`);
-      const data = await res.json();
-      if (data.error) {
-        resultDiv.innerHTML = `<div class="notice">${data.error}</div>`;
-        resultDiv.style.display='block';
-        maskCanvas.style.pointerEvents='none';
-        return;
-      }
-      prize = data.prize;
-      loadPrizeImage(prize);
-    }
+function showResult(prizeText){
+  resultDiv.innerHTML = `<div class="prize">🎉 ${prizeText==='已抽過'?prizeText:`恭喜你中了【${prizeText}】`} 🎉</div>
+    <div class="notice">${prizeText==='已抽過'?'':'請洽服務人員兌獎'}</div>`;
+  resultDiv.style.display='block';
+  maskCanvas.style.pointerEvents='none';
+  if(prizeText!=='已抽過') sendData(prizeText);
+}
 
-    const images = {
-      '天選獎S1':'https://i.postimg.cc/RCGKq4nk/6.png',
-      '天選獎S2':'https://i.postimg.cc/gkxjRNkf/5.png',
-      '機會獎':'https://i.postimg.cc/3xpwfNG1/3.png',
-      '命運獎':'https://i.postimg.cc/RFCV0TDp/2.png'
-    };
+// --- 送資料到 GAS ---
+function sendData(prizeText){
+  if(hasSentData) return;
+  hasSentData=true;
+  const params = new URLSearchParams({action:'record_win', prize:prizeText, deviceBrand, deviceModel, userId});
+  fetch(`${GAS_URL}`,{method:'POST',body:params}).then(res=>res.text()).then(data=>console.log('資料已送出',data)).catch(e=>console.error(e));
+}
 
-    let img = new Image();
-    img.crossOrigin='anonymous';
-    function loadPrizeImage(prize) { 
-      img.src = images[prize];
-    }
+// --- 綁定事件 ---
+maskCanvas.addEventListener('mousedown',e=>{isDrawing=true;scratch(e);});
+maskCanvas.addEventListener('mousemove',scratch);
+maskCanvas.addEventListener('mouseup',()=>{isDrawing=false; checkScratchPercent();});
+maskCanvas.addEventListener('mouseleave',()=>{isDrawing=false;});
+maskCanvas.addEventListener('touchstart',e=>{isDrawing=true;scratch(e);},{passive:false});
+maskCanvas.addEventListener('touchmove',scratch,{passive:false});
+maskCanvas.addEventListener('touchend',()=>{isDrawing=false; checkScratchPercent();});
 
-    function setCanvasSize() {
-      const width = wrapper.clientWidth;
-      const height = Math.floor(width * 1350 / 1080);
-      wrapper.style.height = height+'px';
-      bgCanvas.width = maskCanvas.width = width;
-      bgCanvas.height = maskCanvas.height = height;
-    }
+// --- 載入圖片 ---
+const img=new Image();
+img.crossOrigin='anonymous';
+img.onload=()=>{
+  setCanvasSize();
+  bgCtx.drawImage(img,0,0,bgCanvas.width,bgCanvas.height);
+  initMask();
+};
+window.addEventListener('resize',()=>{
+  setCanvasSize();
+  bgCtx.drawImage(img,0,0,bgCanvas.width,bgCanvas.height);
+  initMask();
+});
 
-    function initMask() {
-      maskCtx.fillStyle='#999';
-      maskCtx.fillRect(0,0,maskCanvas.width,maskCanvas.height);
-    }
-
-    function checkScratchPercent() {
-      const imgData = maskCtx.getImageData(0,0,maskCanvas.width,maskCanvas.height).data;
-      let cleared=0;
-      for(let i=3;i<imgData.length;i+=4) if(imgData[i]===0) cleared++;
-      const percent = cleared/(maskCanvas.width*maskCanvas.height)*100;
-      if(percent>50 && !hasSentData){
-        resultDiv.innerHTML = `<div class="prize">🎉 恭喜你中了【${prize}】 🎉</div>
-        <div class="notice">請洽服務人員兌獎</div>`;
-        resultDiv.style.display='block';
-        maskCanvas.style.pointerEvents='none';
-        sendRecord(prize);
-      }
-    }
-
-    function getPos(e){
-      const rect = maskCanvas.getBoundingClientRect();
-      if(e.touches && e.touches.length>0) return {x:e.touches[0].clientX-rect.left, y:e.touches[0].clientY-rect.top};
-      return {x:e.clientX-rect.left, y:e.clientY-rect.top};
-    }
-
-    let isDrawing=false;
-    function scratch(e){
-      if(!isDrawing) return;
-      e.preventDefault();
-      const {x,y} = getPos(e);
-      maskCtx.globalCompositeOperation='destination-out';
-      maskCtx.beginPath();
-      maskCtx.arc(x,y,50,0,Math.PI*2);
-      maskCtx.fill();
-    }
-
-    maskCanvas.addEventListener('mousedown',()=>{isDrawing=true;});
-    maskCanvas.addEventListener('mousemove',scratch);
-    maskCanvas.addEventListener('mouseup',()=>{isDrawing=false; checkScratchPercent();});
-    maskCanvas.addEventListener('mouseleave',()=>{isDrawing=false;});
-    maskCanvas.addEventListener('touchstart',(e)=>{isDrawing=true; scratch(e);},{passive:false});
-    maskCanvas.addEventListener('touchmove',scratch,{passive:false});
-    maskCanvas.addEventListener('touchend',()=>{isDrawing=false; checkScratchPercent();});
-
-    img.onload = ()=>{
-      setCanvasSize();
-      bgCtx.drawImage(img,0,0,bgCanvas.width,bgCanvas.height);
-      initMask();
-    };
-
-    window.addEventListener('resize',()=>{
-      setCanvasSize();
-      bgCtx.drawImage(img,0,0,bgCanvas.width,bgCanvas.height);
-      initMask();
-    });
-
-    async function sendRecord(prize){
-      hasSentData=true;
-      const params = new URLSearchParams({
-        action:'record_win',
-        userId, prize, deviceBrand, deviceModel
-      });
-      try {
-        const res = await fetch(GAS_URL, {method:'POST', body: params});
-        const data = await res.json();
-        console.log('送出資料:', data);
-      } catch(e){ console.error('送出失敗', e);}
-    }
-
-    initLiff();
-  </script>
+// --- 初始化 ---
+initLiff();
+</script>
 </body>
 </html>

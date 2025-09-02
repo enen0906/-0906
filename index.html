@@ -103,10 +103,41 @@
         let deviceBrand = '未知';
         let deviceModel = '未知';
 
-        // 型號對照表 (與之前的程式碼相同)
+        // 型號對照表 (已補齊)
         const modelMap = {
-            "SM-G9800": "Galaxy S20", "SM-G9860": "Galaxy S20+", "SM-G9880": "Galaxy S20 Ultra",
-            "IPHONE": "Apple iPhone（型號未知）", "PIXEL 7": "Google Pixel 7"
+            "SM-G9800": "Samsung Galaxy S20",
+            "SM-G9860": "Samsung Galaxy S20+",
+            "SM-G9880": "Samsung Galaxy S20 Ultra",
+            "SM-A515F": "Samsung Galaxy A51",
+            "SM-N970F": "Samsung Galaxy Note 10",
+            "SM-F700F": "Samsung Galaxy Z Flip",
+            "IPHONE": "Apple iPhone (型號未知)",
+            "IPHONE 11,2": "Apple iPhone 11",
+            "IPHONE 12,1": "Apple iPhone 11",
+            "IPHONE 12,3": "Apple iPhone 11 Pro",
+            "IPHONE 12,5": "Apple iPhone 11 Pro Max",
+            "IPHONE 13,1": "Apple iPhone 12 mini",
+            "IPHONE 13,2": "Apple iPhone 12",
+            "IPHONE 13,3": "Apple iPhone 12 Pro",
+            "IPHONE 13,4": "Apple iPhone 12 Pro Max",
+            "IPHONE 14,2": "Apple iPhone 13 Pro",
+            "IPHONE 14,3": "Apple iPhone 13 Pro Max",
+            "IPHONE 14,4": "Apple iPhone 13 mini",
+            "IPHONE 14,5": "Apple iPhone 13",
+            "IPHONE 15,2": "Apple iPhone 14 Pro",
+            "IPHONE 15,3": "Apple iPhone 14 Pro Max",
+            "IPHONE 15,4": "Apple iPhone 14 Plus",
+            "IPHONE 15,5": "Apple iPhone 14",
+            "PIXEL 7": "Google Pixel 7",
+            "PIXEL 7 PRO": "Google Pixel 7 Pro",
+            "PIXEL 6": "Google Pixel 6",
+            "PIXEL 6 PRO": "Google Pixel 6 Pro",
+            "PIXEL 5": "Google Pixel 5",
+            "ONEPLUS A6003": "OnePlus 6T",
+            "M2102J20SG": "Xiaomi Redmi Note 10",
+            "ASUS_Z01QD": "ASUS ROG Phone 2",
+            "HUAWEI MATE 20": "Huawei Mate 20",
+            "SONY G8342": "Sony Xperia XZ1"
         };
         function guessModelName(rawModel) {
             if (!rawModel) return rawModel || "未知機型";
@@ -117,8 +148,13 @@
         }
         function detectBrand(modelCode) {
             const code = modelCode.toUpperCase();
-            if (code.startsWith("SM-")) return "Samsung";
+            if (code.startsWith("SM-") || code.includes("GALAXY")) return "Samsung";
             if (code.includes("IPHONE")) return "Apple";
+            if (code.includes("PIXEL")) return "Google";
+            if (code.includes("ONEPLUS")) return "OnePlus";
+            if (code.includes("HUAWEI")) return "Huawei";
+            if (code.includes("SONY")) return "Sony";
+            if (code.includes("ASUS")) return "Asus";
             return "Android";
         }
         function getAndroidModel(ua) {
@@ -132,8 +168,9 @@
         }
         function getDeviceInfo() {
             const ua = navigator.userAgent;
-            if (ua.includes("iPhone")) { deviceBrand = "Apple"; deviceModel = "iPhone"; }
+            if (ua.includes("iPhone")) { deviceBrand = "Apple"; deviceModel = guessModelName(ua); }
             else if (ua.includes("Android")) { const rawModel = getAndroidModel(ua); deviceModel = guessModelName(rawModel); deviceBrand = detectBrand(rawModel); }
+            else { deviceBrand = "未知"; deviceModel = "未知"; }
         }
         
         function setCanvasSize() {
@@ -226,10 +263,10 @@
             }
 
             const images = {
-                '天選獎S1': 'https://i.ibb.co/L5hY52B/S1-prize.jpg',
-                '天選獎S2': 'https://i.ibb.co/6PzL2nF/S2-prize.jpg',
-                '機會獎': 'https://i.ibb.co/6Pq931P/A.png',
-                '命運獎': 'https://i.ibb.co/YyLgT7c/B.png'
+                '天選獎S1': 'https://i.ibb.co/6y4tW64/S1-prize.jpg',
+                '天選獎S2': 'https://i.ibb.co/y4L2jCj/S2-prize.jpg',
+                '機會獎': 'https://i.ibb.co/h93LqFv/A-prize.jpg',
+                '命運獎': 'https://i.ibb.co/8b76D1F/B-prize.jpg'
             };
             
             const img = new Image();
@@ -243,6 +280,18 @@
                 setupEventListeners();
             };
             
+            img.onerror = () => {
+                console.error("Failed to load prize image.");
+                bgCtx.fillStyle = '#f0f0f0';
+                bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+                bgCtx.fillStyle = '#555';
+                bgCtx.font = '30px Arial';
+                bgCtx.textAlign = 'center';
+                bgCtx.fillText('圖片載入失敗', bgCanvas.width / 2, bgCanvas.height / 2);
+                initMask();
+                setupEventListeners();
+            };
+
             window.addEventListener('resize', () => {
                 setCanvasSize();
                 bgCtx.drawImage(img, 0, 0, bgCanvas.width, bgCanvas.height);

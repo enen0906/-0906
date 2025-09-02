@@ -1,187 +1,147 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>大學星生活 🌟 刮刮卡</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>⭐大學星生活⭐刮刮卡</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            text-align: center;
-            background-color: #f7f3f0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            min-height: 100vh;
+        html, body {
+            height: 100%;
             margin: 0;
-            padding: 20px;
-        }
-        h1 {
-            color: #ff6347;
-            font-size: 2.5rem;
-            margin-bottom: 20px;
-            font-weight: bold;
+            padding: 0;
+            background: #fafafa;
+            font-family: 'Inter', sans-serif;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
         }
-        h1::before, h1::after {
-            content: "🌟";
-            font-size: 2rem;
-            margin: 0 10px;
+
+        h1 {
+            font-size: clamp(24px, 5vw, 42px);
+            color: #ff4500;
+            font-weight: bold;
+            margin: 20px 0;
+            text-shadow: 1px 1px 2px #a00;
         }
+
         #wrapper {
             position: relative;
-            width: 100%;
-            max-width: 1080px;
-            margin: 0 auto;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            border-radius: 20px;
+            width: 90vw;
+            max-width: 500px;
+            aspect-ratio: 1080 / 1350;
+            border-radius: 12px;
             overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
-        canvas {
-            border-radius: 15px;
-            touch-action: none;
-        }
-        #result {
+        
+        #bgCanvas, #maskCanvas {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            display: none; /* 初始隱藏 */
+        }
+
+        #message-container {
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
             text-align: center;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            z-index: 3;
-            background-color: rgba(255, 255, 255, 0.9);
-        }
-        .prize {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #ff6347;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-        }
-        .notice {
-            color: #d60000;
-            font-weight: bold;
-            font-size: 70px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            box-sizing: border-box;
         }
         
+        .prize-text {
+            font-size: clamp(28px, 6vw, 48px);
+            font-weight: 700;
+            color: #c00;
+            margin-bottom: 10px;
+        }
+
+        .notice-text {
+            font-size: clamp(18px, 4vw, 32px);
+            color: #e60000;
+            font-weight: 700;
+        }
+
+        .loading-text {
+            font-size: 24px;
+            color: #555;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
     </style>
 </head>
 <body>
-    <h1>大學星生活</h1>
-    <div id="wrapper" style="position:relative; width:100%; max-width:1080px; margin:0 auto;">
-        <canvas id="bgCanvas" style="position:absolute; top:0; left:0; z-index:1;"></canvas>
-        <canvas id="maskCanvas" style="position:absolute; top:0; left:0; z-index:2;"></canvas>
-        <div id="result" style="position:absolute; top:0; left:0; width:100%; height:100%; display:flex; text-align:center; justify-content:center; align-items:center; flex-direction:column; z-index:3;"></div>
+    <h1>⭐大學星生活⭐</h1>
+    <div id="wrapper">
+        <canvas id="bgCanvas"></canvas>
+        <canvas id="maskCanvas"></canvas>
     </div>
-
+    <div id="message-container">
+        <!-- 訊息將在此顯示 -->
+        <div id="status-message" class="loading-text">正在確認您的參加資格...</div>
+    </div>
+    
     <script>
+        // 在這裡設定你的 LIFF ID 和 Google Apps Script 部署後的 URL
         const LIFF_ID = '2007597530-o1xaVbZm';
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxqa2xiM8ZUvN8Izt5siIF4_AafygmWWni0Gtf59rCZCyovV4Sun-DFLonehWktxeOb/exec';
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbz9nfhw-DxaLUeSyMnmdvF02SjtlOLwccZ8--bFr_zqCgGJyCV4AYIe8fiUf0Vt1-tv/exec';
 
+        // 元素
         const wrapper = document.getElementById('wrapper');
         const bgCanvas = document.getElementById('bgCanvas');
         const maskCanvas = document.getElementById('maskCanvas');
         const bgCtx = bgCanvas.getContext('2d');
         const maskCtx = maskCanvas.getContext('2d');
-        const resultDiv = document.getElementById('result');
+        const statusMessageDiv = document.getElementById('status-message');
+        const messageContainer = document.getElementById('message-container');
 
+        // 狀態變數
+        let isDrawing = false;
+        let prize = '';
+        let hasSentData = false;
+        let userId = '未知';
         let deviceBrand = '未知';
         let deviceModel = '未知';
-        let userId = '未知';
-        let hasSentData = false;
-        let prize = '';
 
-        // 型號對照表，全部大寫 Key
+        // 裝置型號對照表 (從您提供的最新版本中複製)
         const modelMap = {
-            // Galaxy S 系列
-            "SM-G9800": "Galaxy S20",
-            "SM-G9860": "Galaxy S20+",
-            "SM-G9880": "Galaxy S20 Ultra",
-            "SM-G9910": "Galaxy S21",
-            "SM-G9960": "Galaxy S21+",
-            "SM-G9980": "Galaxy S21 Ultra",
-            "SM-S9010": "Galaxy S22",
-            "SM-S9060": "Galaxy S22+",
-            "SM-S9080": "Galaxy S22 Ultra",
-            "SM-S9110": "Galaxy S23",
-            "SM-S9160": "Galaxy S23+",
-            "SM-S9180": "Galaxy S23 Ultra",
-            "SM-S9210": "Galaxy S24",
-            "SM-S9260": "Galaxy S24+",
-            "SM-S9280": "Galaxy S24 Ultra",
-            "SM-S9310": "Galaxy S25",
-            "SM-S9360": "Galaxy S25+",
-            "SM-S9380": "Galaxy S25 Ultra",
-
-            // Galaxy Z 系列
-            "SM-F7000": "Galaxy Z Flip",
-            "SM-F9160": "Galaxy Z Fold2",
-            "SM-F7110": "Galaxy Z Flip3",
-            "SM-F9260": "Galaxy Z Fold3",
-            "SM-F7210": "Galaxy Z Flip4",
-            "SM-F9360": "Galaxy Z Fold4",
-            "SM-F7310": "Galaxy Z Flip5",
-            "SM-F9460": "Galaxy Z Fold5",
-            "SM-F7410": "Galaxy Z Flip6",
+            "SM-G9800": "Galaxy S20", "SM-G9860": "Galaxy S20+", "SM-G9880": "Galaxy S20 Ultra",
+            "SM-G9910": "Galaxy S21", "SM-G9960": "Galaxy S21+", "SM-G9980": "Galaxy S21 Ultra",
+            "SM-S9010": "Galaxy S22", "SM-S9060": "Galaxy S22+", "SM-S9080": "Galaxy S22 Ultra",
+            "SM-S9110": "Galaxy S23", "SM-S9160": "Galaxy S23+", "SM-S9180": "Galaxy S23 Ultra",
+            "SM-S9210": "Galaxy S24", "SM-S9260": "Galaxy S24+", "SM-S9280": "Galaxy S24 Ultra",
+            "SM-S9310": "Galaxy S25", "SM-S9360": "Galaxy S25+", "SM-S9380": "Galaxy S25 Ultra",
+            "SM-F7000": "Galaxy Z Flip", "SM-F9160": "Galaxy Z Fold2", "SM-F7110": "Galaxy Z Flip3",
+            "SM-F9260": "Galaxy Z Fold3", "SM-F7210": "Galaxy Z Flip4", "SM-F9360": "Galaxy Z Fold4",
+            "SM-F7310": "Galaxy Z Flip5", "SM-F9460": "Galaxy Z Fold5", "SM-F7410": "Galaxy Z Flip6",
             "SM-F9560": "Galaxy Z Fold6",
-
-            // Galaxy A 系列
-            "SM-A5150": "Galaxy A51",
-            "SM-A7150": "Galaxy A71",
-            "SM-A3250": "Galaxy A32",
-            "SM-A5250": "Galaxy A52",
-            "SM-A5260": "Galaxy A52 5G",
-            "SM-A7250": "Galaxy A72",
-            "SM-A2660": "Galaxy A26 5G",
-            "SM-A3360": "Galaxy A33 5G",
-            "SM-A3660": "Galaxy A36 5G",
-            "SM-A5360": "Galaxy A53 5G",
-            "SM-A5660": "Galaxy A56 5G",
-            "SM-A7360": "Galaxy A73 5G",
-            "SM-A1460": "Galaxy A14 5G",
-            "SM-A2450": "Galaxy A24",
-            "SM-A3460": "Galaxy A34 5G",
-            "SM-A5460": "Galaxy A54 5G",
-            "SM-A3560": "Galaxy A35 5G",
-            "SM-A5560": "Galaxy A55 5G",
+            "SM-A5150": "Galaxy A51", "SM-A7150": "Galaxy A71", "SM-A3250": "Galaxy A32",
+            "SM-A5250": "Galaxy A52", "SM-A5260": "Galaxy A52 5G", "SM-A7250": "Galaxy A72",
+            "SM-A2660": "Galaxy A26 5G", "SM-A3360": "Galaxy A33 5G", "SM-A3660": "Galaxy A36 5G",
+            "SM-A5360": "Galaxy A53 5G", "SM-A5660": "Galaxy A56 5G", "SM-A7360": "Galaxy A73 5G",
+            "SM-A1460": "Galaxy A14 5G", "SM-A2450": "Galaxy A24", "SM-A3460": "Galaxy A34 5G",
+            "SM-A5460": "Galaxy A54 5G", "SM-A3560": "Galaxy A35 5G", "SM-A5560": "Galaxy A55 5G",
             "SM-A1660": "Galaxy A16",
-
-            // 已有的機種
-            "iPhone": "Apple iPhone（型號未知）",
-            "Pixel 7": "Google Pixel 7",
-            "Pixel 7 Pro": "Google Pixel 7 Pro",
-            "Pixel 8": "Google Pixel 8",
-            "Pixel 8 Pro": "Google Pixel 8 Pro",
-            "Pixel 9": "Google Pixel 9",
-            "Pixel 9 Pro": "Google Pixel 9 Pro",
-            "OnePlus 9": "OnePlus 9",
-            "OnePlus 10": "OnePlus 10",
-            "OnePlus 11": "OnePlus Buds",
-            "OnePlus 13": "OnePlus 13",
-            "XQ-DC72": "Sony Xperia 1 V",
-            "XQ-DQ72": "Sony Xperia 5 V",
-            "23078PND5G": "Xiaomi 13T Pro",
-            "22071212AG": "Xiaomi 12T Pro",
-            "23021RAA2Y": "Redmi Note 12",
+            "IPHONE": "Apple iPhone（型號未知）",
+            "PIXEL 7": "Google Pixel 7", "PIXEL 7 PRO": "Google Pixel 7 Pro", "PIXEL 8": "Google Pixel 8",
+            "PIXEL 8 PRO": "Google Pixel 8 Pro", "PIXEL 9": "Google Pixel 9", "PIXEL 9 PRO": "Google Pixel 9 Pro",
+            "ONEPLUS 9": "OnePlus 9", "ONEPLUS 10": "OnePlus 10", "ONEPLUS 11": "OnePlus Buds",
+            "ONEPLUS 13": "OnePlus 13",
+            "XQ-DC72": "Sony Xperia 1 V", "XQ-DQ72": "Sony Xperia 5 V",
+            "23078PND5G": "Xiaomi 13T Pro", "22071212AG": "Xiaomi 12T Pro", "23021RAA2Y": "Redmi Note 12",
             "23090RA98G": "Redmi Note 13 Pro",
-            "AI2205": "ASUS ROG Phone 6",
-            "AI2401": "ASUS ROG Phone 8",
-            "AI2302": "ASUS Zenfone 10",
-            "CPH2491": "OPPO Reno10",
-            "CPH2525": "OPPO Find X6",
-            "V2238": "vivo X90",
-            "V2303": "vivo Y78",
-            "RMX3820": "realme 11 Pro+",
-            "RMX3866": "realme GT Neo5"
+            "AI2205": "ASUS ROG Phone 6", "AI2401": "ASUS ROG Phone 8", "AI2302": "ASUS Zenfone 10",
+            "CPH2491": "OPPO Reno10", "CPH2525": "OPPO Find X6",
+            "V2238": "vivo X90", "V2303": "vivo Y78",
+            "RMX3820": "realme 11 Pro+", "RMX3866": "realme GT Neo5"
         };
 
         function guessModelName(rawModel) {
@@ -210,7 +170,7 @@
 
         function getAndroidModel(ua) {
             let match = ua.match(/android.*;\s([^;]+)\sbuild/i) || ua.match(/android.*;\s([^;]+)\)/i);
-            if(match && match[1]){
+            if (match && match[1]) {
                 let model = match[1].trim();
                 return model.toLowerCase() === 'wv' ? "Android裝置" : model;
             }
@@ -219,14 +179,14 @@
 
         function getDeviceInfo() {
             const ua = navigator.userAgent.toLowerCase();
-            if(ua.includes('iphone')) { deviceBrand='Apple'; deviceModel='iPhone'; }
-            else if(ua.includes('ipad')) { deviceBrand='Apple'; deviceModel='iPad'; }
-            else if(ua.includes('android')) {
+            if (ua.includes('iphone')) { deviceBrand = 'Apple'; deviceModel = 'iPhone'; }
+            else if (ua.includes('ipad')) { deviceBrand = 'Apple'; deviceModel = 'iPad'; }
+            else if (ua.includes('android')) {
                 const raw = getAndroidModel(ua);
                 const code = raw.toUpperCase();
                 deviceModel = guessModelName(code);
                 deviceBrand = detectBrand(code);
-            } else { deviceBrand='未知'; deviceModel='未知'; }
+            } else { deviceBrand = '未知'; deviceModel = '未知'; }
         }
 
         // 抽獎圖片
@@ -238,115 +198,175 @@
         };
 
         let img = new Image();
-        img.crossOrigin='anonymous';
+        img.crossOrigin = 'anonymous';
 
+        // 初始化 LIFF
         async function initLiff() {
-            await liff.init({ liffId: LIFF_ID });
-            if(!liff.isLoggedIn()) liff.login();
-            else{
-                try { const profile = await liff.getProfile(); userId = profile.userId || '未知'; }
-                catch(err){ console.error(err); }
-                getDeviceInfo();
-                checkIfUserHasDrawn();
+            try {
+                await liff.init({ liffId: LIFF_ID });
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                } else {
+                    const profile = await liff.getProfile();
+                    userId = profile.userId || '未知';
+                    getDeviceInfo();
+                    checkIfUserHasDrawn();
+                }
+            } catch (err) {
+                console.error('LIFF 初始化失敗', err);
+                statusMessageDiv.className = 'notice-text';
+                statusMessageDiv.textContent = 'LIFF 初始化失敗，請確認 LIFF ID。';
+            }
+        }
+        
+        // 檢查使用者是否已參加過抽獎
+        async function checkIfUserHasDrawn() {
+            statusMessageDiv.textContent = '正在確認您的參加資格...';
+            try {
+                const res = await fetch(`${GAS_URL}?action=check_draw&userId=${userId}`);
+                const data = await res.json();
+                
+                if (data.hasDrawn) {
+                    statusMessageDiv.className = 'prize-text';
+                    statusMessageDiv.textContent = '⚠️ 您已參加過抽獎';
+                    maskCanvas.style.pointerEvents = 'none';
+                } else {
+                    statusMessageDiv.textContent = '請刮開卡片以顯示結果...';
+                    loadPrize();
+                }
+            } catch (err) {
+                console.error('檢查資格失敗', err);
+                statusMessageDiv.className = 'notice-text';
+                statusMessageDiv.textContent = '檢查資格失敗，請再試一次。';
             }
         }
 
-        async function checkIfUserHasDrawn() {
-            try {
-                const res = await fetch(`${GAS_URL}?userId=${userId}`);
-                const data = await res.json(); // { hasDrawn:true/false }
-                if(data.hasDrawn){
-                    resultDiv.innerHTML = '<div class="prize">⚠️ 您已參加過抽獎</div>';
-                    maskCanvas.style.pointerEvents='none';
-                } else loadPrize();
-            } catch(err){ console.error(err); }
-        }
-
+        // 從 GAS 取得抽獎結果
         async function loadPrize() {
-            const params = new URLSearchParams({ action:'draw', userId, deviceBrand, deviceModel, timestamp:new Date().toISOString() });
-            const res = await fetch(`${GAS_URL}?${params.toString()}`);
-            const data = await res.json();
-            prize = data.prize || '命運獎';
-            img.src = images[prize];
+            try {
+                const params = new URLSearchParams({ action: 'draw_prize', userId });
+                const res = await fetch(`${GAS_URL}?${params.toString()}`);
+                const data = await res.json();
+                prize = data.prize || '命運獎';
+                img.src = images[prize];
+            } catch (err) {
+                console.error('取得獎品失敗', err);
+                statusMessageDiv.className = 'notice-text';
+                statusMessageDiv.textContent = '取得獎品失敗，請重新整理。';
+            }
         }
 
         img.onload = () => {
             setCanvasSize();
-            bgCtx.drawImage(img,0,0,bgCanvas.width,bgCanvas.height);
+            bgCtx.drawImage(img, 0, 0, bgCanvas.width, bgCanvas.height);
+            initMask();
+        };
+
+        img.onerror = () => {
+            console.error("Failed to load prize image.");
+            bgCtx.fillStyle = '#f0f0f0';
+            bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+            bgCtx.fillStyle = '#555';
+            bgCtx.font = '30px Arial';
+            bgCtx.textAlign = 'center';
+            bgCtx.fillText('圖片載入失敗', bgCanvas.width / 2, bgCanvas.height / 2);
             initMask();
         };
 
         // 設定 canvas 尺寸
-        function setCanvasSize(){
+        function setCanvasSize() {
             const width = wrapper.clientWidth;
-            const height = Math.floor(width * 1350/1080);
-            wrapper.style.height = height+'px';
+            const height = Math.floor(width * 1350 / 1080);
+            wrapper.style.height = height + 'px';
             bgCanvas.width = maskCanvas.width = width;
             bgCanvas.height = maskCanvas.height = height;
         }
 
         // 初始化遮罩
-        function initMask(){
-            maskCtx.fillStyle='#999';
-            maskCtx.fillRect(0,0,maskCanvas.width,maskCanvas.height);
+        function initMask() {
+            maskCtx.fillStyle = '#999';
+            maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+            maskCtx.globalCompositeOperation = 'destination-out';
         }
 
         // 檢查刮開比例
-        function checkScratchPercent(){
-            const imgData = maskCtx.getImageData(0,0,maskCanvas.width,maskCanvas.height).data;
-            let cleared=0;
-            for(let i=3;i<imgData.length;i+=4) if(imgData[i]===0) cleared++;
-            const percent = cleared/(maskCanvas.width*maskCanvas.height)*100;
-            if(percent>50){
-                resultDiv.innerHTML = `
-                    <div class="prize">🎉 恭喜你中了【${prize}】 🎉</div>
-                    <div class="notice" style="color:#d60000;font-weight:bold;font-size:70px;">請洽服務人員兌獎</div>
-                `;
-                resultDiv.style.display='flex';
-                maskCanvas.style.pointerEvents='none';
+        function checkScratchPercent() {
+            const imgData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height).data;
+            let cleared = 0;
+            for (let i = 3; i < imgData.length; i += 4) {
+                if (imgData[i] === 0) cleared++;
+            }
+            const percent = cleared / (maskCanvas.width * maskCanvas.height) * 100;
+            if (percent > 50) {
+                statusMessageDiv.innerHTML = `<div class="prize-text">🎉 恭喜你中了【${prize}】 🎉<br><span class="notice-text">請洽服務人員兌獎</span></div>`;
+                maskCanvas.style.pointerEvents = 'none';
                 sendData(prize);
             }
         }
 
-        // 送資料
-        function sendData(prize){
-            if(hasSentData) return;
-            hasSentData=true;
-            const params = new URLSearchParams({ prize, deviceBrand, deviceModel, userId, timestamp:new Date().toISOString() });
-            fetch(`${GAS_URL}?${params.toString()}`).catch(err=>console.error(err));
+        // 向 GAS 傳送中獎資料
+        async function sendData(prize) {
+            if (hasSentData) return;
+            hasSentData = true;
+
+            const params = new URLSearchParams({
+                action: 'record_win',
+                prize,
+                deviceBrand,
+                deviceModel,
+                userId,
+                timestamp: new Date().toISOString()
+            });
+            
+            try {
+                const res = await fetch(`${GAS_URL}?${params.toString()}`);
+                const data = await res.json();
+                console.log('GAS 回應:', data);
+            } catch (err) {
+                console.error('資料送出失敗', err);
+                hasSentData = false; // 如果失敗，允許重試
+            }
         }
 
         // 刮刮卡事件
-        let isDrawing=false;
-        function getPos(e){ 
-            const rect=maskCanvas.getBoundingClientRect();
-            if(e.touches && e.touches.length>0) return {x:e.touches[0].clientX-rect.left, y:e.touches[0].clientY-rect.top};
-            else return {x:e.clientX-rect.left, y:e.clientY-rect.top};
+        function getPos(e) {
+            const rect = maskCanvas.getBoundingClientRect();
+            if (e.touches && e.touches.length > 0) {
+                return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+            } else {
+                return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            }
         }
-        function scratch(e){
-            if(!isDrawing) return;
+        
+        function scratch(e) {
+            if (!isDrawing) return;
             e.preventDefault();
-            const {x,y}=getPos(e);
-            maskCtx.globalCompositeOperation='destination-out';
+            const { x, y } = getPos(e);
+            maskCtx.globalCompositeOperation = 'destination-out';
             maskCtx.beginPath();
-            maskCtx.arc(x,y,50,0,Math.PI*2);
+            maskCtx.arc(x, y, 50, 0, Math.PI * 2);
             maskCtx.fill();
         }
 
-        maskCanvas.addEventListener('mousedown',e=>{isDrawing=true; scratch(e);});
-        maskCanvas.addEventListener('mousemove',scratch);
-        maskCanvas.addEventListener('mouseup',()=>{isDrawing=false; checkScratchPercent();});
-        maskCanvas.addEventListener('mouseleave',()=>{isDrawing=false;});
-        maskCanvas.addEventListener('touchstart',e=>{isDrawing=true; scratch(e);},{passive:false});
-        maskCanvas.addEventListener('touchmove',scratch,{passive:false});
-        maskCanvas.addEventListener('touchend',()=>{isDrawing=false; checkScratchPercent();});
+        // 設定事件監聽器
+        maskCanvas.addEventListener('mousedown', e => { isDrawing = true; scratch(e); });
+        maskCanvas.addEventListener('mousemove', scratch);
+        maskCanvas.addEventListener('mouseup', () => { isDrawing = false; checkScratchPercent(); });
+        maskCanvas.addEventListener('mouseleave', () => { isDrawing = false; });
+        maskCanvas.addEventListener('touchstart', e => { isDrawing = true; scratch(e); }, { passive: false });
+        maskCanvas.addEventListener('touchmove', scratch, { passive: false });
+        maskCanvas.addEventListener('touchend', () => { isDrawing = false; checkScratchPercent(); });
 
-        window.addEventListener('resize',()=>{
+        window.addEventListener('resize', () => {
             setCanvasSize();
-            bgCtx.drawImage(img,0,0,bgCanvas.width,bgCanvas.height);
+            bgCtx.drawImage(img, 0, 0, bgCanvas.width, bgCanvas.height);
+            initMask();
         });
 
-        initLiff();
+        // 啟動應用程式
+        window.addEventListener('DOMContentLoaded', () => {
+            initLiff();
+        });
     </script>
 </body>
 </html>

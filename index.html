@@ -298,7 +298,7 @@
             }
             const percent = cleared / (maskCanvas.width * maskCanvas.height) * 100;
             if (percent > 50) {
-                statusMessageDiv.innerHTML = `<div class="prize-text">🎉 恭喜你中了【${prize}】 🎉</div><div class="notice-text">請洽服務人員兌獎</div>`;
+                statusMessageDiv.innerHTML = `<div class="prize-text">🎉 恭喜你中了【${prize}】 🎉<br><span class="notice-text">請洽服務人員兌獎</span></div>`;
                 maskCanvas.style.pointerEvents = 'none';
                 sendData(prize);
             }

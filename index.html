@@ -197,16 +197,19 @@
 
         const liffInit = async () => {
             try {
-                // 請將此處的 LIFF ID 替換為你在 LIFF 後台建立的有效 ID
-                // 例如: await liff.init({ liffId: '你的 LIFF ID' });
                 await liff.init({ liffId: '2007597530-o1xaVbZm' });
-                const profile = await liff.getProfile();
-                liffId = profile.userId;
-                const device = liff.getSystemLanguage();
-                deviceBrand = navigator.vendor;
-                deviceModel = navigator.userAgentData?.brands?.[0]?.brand || '未知';
-                
-                checkUserDrawStatus();
+
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                } else {
+                    const profile = await liff.getProfile();
+                    liffId = profile.userId;
+                    const device = liff.getSystemLanguage();
+                    deviceBrand = navigator.vendor;
+                    deviceModel = navigator.userAgentData?.brands?.[0]?.brand || '未知';
+                    
+                    checkUserDrawStatus();
+                }
             } catch (err) {
                 showMessage(`LIFF 初始化失敗：${err.message}`);
                 console.error("LIFF initialization failed", err);
@@ -215,6 +218,9 @@
         };
         
         const checkUserDrawStatus = async () => {
+            if (!liffId) {
+                console.warn("無法取得 LIFF ID，將使用未知 ID 繼續。");
+            }
             const params = new URLSearchParams({
                 action: 'check_draw',
                 userId: liffId || '未知'

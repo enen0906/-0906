@@ -44,13 +44,12 @@ const images = {
   '天選獎S1':'https://i.postimg.cc/RCGKq4nk/6.png',
   '天選獎S2':'https://i.postimg.cc/gkxjRNkf/5.png',
   '機會獎':'https://i.postimg.cc/3xpwfNG1/3.png',
-  '命運獎':'https://i.postimg.cc/RFCV0TDp/2.png',
-  '無獎項':'https://i.postimg.cc/3xpwfNG1/3.png'
+  '命運獎':'https://i.postimg.cc/RFCV0TDp/2.png'
 };
 
-// --- 型號偵測函式 ---
+// --- 型號偵測函式（可自行擴展） ---
 function guessModelName(rawModel){return rawModel||"未知機型";}
-function detectBrand(modelCode){return "Android";} // 可擴展
+function detectBrand(modelCode){return "Android";}
 function getAndroidModel(ua){return "Android裝置";}
 
 // --- LIFF 登入與抓使用者 ID ---
@@ -86,9 +85,13 @@ async function checkDrawAndInitPrize(){
     // 呼叫 GAS 抽獎
     const respDraw = await fetch(`${GAS_URL}?action=draw_prize&userId=${userId}`);
     const dataDraw = await respDraw.json();
-    prize = dataDraw.prize || '無獎項';
-    img.src = images[prize];
-  }catch(e){ console.error('抽獎失敗',e); prize='無獎項'; img.src = images[prize]; }
+    prize = dataDraw.prize || '命運獎';
+    img.src = images[prize];  // ✅ 只有這裡設定圖片
+  }catch(e){ 
+    console.error('抽獎失敗',e); 
+    prize='命運獎'; 
+    img.src = images[prize]; 
+  }
 }
 
 // --- 畫布設定 ---

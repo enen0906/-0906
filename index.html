@@ -197,7 +197,9 @@
 
         const liffInit = async () => {
             try {
-                await liff.init({ liffId: '2007597530-8iffRedirect' }); // 請替換為你的 LIFF ID
+                // 請將此處的 LIFF ID 替換為你在 LIFF 後台建立的有效 ID
+                // 例如: await liff.init({ liffId: '你的 LIFF ID' });
+                await liff.init({ liffId: '2007597530-o1xaVbZm' });
                 const profile = await liff.getProfile();
                 liffId = profile.userId;
                 const device = liff.getSystemLanguage();

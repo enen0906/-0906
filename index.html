@@ -79,7 +79,7 @@ async function fetchPrizeFromGAS(){
     img.src = images[prize] || images['機會獎'];
   }catch(e){
     console.error('抽獎失敗',e);
-    prize='機會獎'; // fallback
+    prize='機會獎';
     img.src = images[prize];
   }
 }
@@ -123,11 +123,36 @@ function checkScratchPercent(){
   if(cleared/(maskCanvas.width*maskCanvas.height) > 0.5) showResult(prize);
 }
 
+// --- 顯示結果並送資料 ---
 function showResult(prizeText){
   resultDiv.innerHTML = `<div class="prize">🎉 ${prizeText==='已抽過'?prizeText:`恭喜你中了【${prizeText}】`} 🎉</div>
     <div class="notice">${prizeText==='已抽過'?'':'請洽服務人員兌獎'}</div>`;
   resultDiv.style.display='block';
   maskCanvas.style.pointerEvents='none';
+  
+  if(prizeText!=='已抽過') sendData(prizeText);
+}
+
+// --- 送資料到 GAS ---
+function sendData(prizeText){
+  if(hasSentData) return;
+  hasSentData = true;
+  
+  const params = new URLSearchParams({
+    action: 'record_win',
+    prize: prizeText,
+    deviceBrand,
+    deviceModel,
+    userId
+  });
+  
+  fetch(GAS_URL, {
+    method: 'POST',
+    body: params
+  })
+  .then(res => res.text())
+  .then(data => console.log('資料已送出', data))
+  .catch(e => console.error('送資料失敗', e));
 }
 
 // --- 綁定事件 ---

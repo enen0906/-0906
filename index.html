@@ -47,7 +47,7 @@ const images = {
   '命運獎':'https://i.postimg.cc/RFCV0TDp/2.png'
 };
 
-// --- 型號偵測 ---
+// --- 型號偵測函式 ---
 function getDeviceInfo(){
   const ua=navigator.userAgent.toLowerCase();
   if(ua.includes('iphone')){ deviceBrand='Apple'; deviceModel='iPhone'; }
@@ -66,20 +66,20 @@ async function initLiff(){
       userId=profile.userId||'未知'; 
     } catch(err){ console.error('無法取得使用者ID',err);}
     getDeviceInfo();
-    await fetchPrizeFromGAS();
+    await drawFromGAS();
   }
 }
 
-// --- 從 GAS 取得抽獎結果 ---
-async function fetchPrizeFromGAS(){
+// --- 從 GAS 抽獎 ---
+async function drawFromGAS(){
   try{
     const resp = await fetch(`${GAS_URL}?action=draw&userId=${userId}&deviceBrand=${deviceBrand}&deviceModel=${deviceModel}`);
     const data = await resp.json();
-    prize = data.prize || '機會獎'; // fallback
+    prize = data.prize || '機會獎';
     img.src = images[prize] || images['機會獎'];
   }catch(e){
-    console.error('抽獎失敗',e);
-    prize='機會獎';
+    console.error('抽獎失敗', e);
+    prize = '機會獎';
     img.src = images[prize];
   }
 }
@@ -98,7 +98,7 @@ function initMask(){
   maskCtx.fillRect(0,0,maskCanvas.width,maskCanvas.height);
 }
 
-// --- 刮刮卡 ---
+// --- 刮刮卡邏輯 ---
 let isDrawing=false;
 function getPos(e){
   const rect=maskCanvas.getBoundingClientRect();
@@ -123,36 +123,11 @@ function checkScratchPercent(){
   if(cleared/(maskCanvas.width*maskCanvas.height) > 0.5) showResult(prize);
 }
 
-// --- 顯示結果並送資料 ---
 function showResult(prizeText){
   resultDiv.innerHTML = `<div class="prize">🎉 ${prizeText==='已抽過'?prizeText:`恭喜你中了【${prizeText}】`} 🎉</div>
     <div class="notice">${prizeText==='已抽過'?'':'請洽服務人員兌獎'}</div>`;
   resultDiv.style.display='block';
   maskCanvas.style.pointerEvents='none';
-  
-  if(prizeText!=='已抽過') sendData(prizeText);
-}
-
-// --- 送資料到 GAS ---
-function sendData(prizeText){
-  if(hasSentData) return;
-  hasSentData = true;
-  
-  const params = new URLSearchParams({
-    action: 'record_win',
-    prize: prizeText,
-    deviceBrand,
-    deviceModel,
-    userId
-  });
-  
-  fetch(GAS_URL, {
-    method: 'POST',
-    body: params
-  })
-  .then(res => res.text())
-  .then(data => console.log('資料已送出', data))
-  .catch(e => console.error('送資料失敗', e));
 }
 
 // --- 綁定事件 ---

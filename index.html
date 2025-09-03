@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -195,7 +194,7 @@ async function drawLottery(){
       const recordSnap = await db.ref('lottery-records/' + userId).get();
       if(recordSnap.exists()){
         showResult(recordSnap.val().prize, true); // 重複抽
-    return;
+        return;
       }
     }
 
@@ -224,7 +223,7 @@ async function drawLottery(){
       timestamp: Date.now()
     });
 
- img.src = images[prize];
+    img.src = images[prize];
 
     showResult(prize, false); // 第一次抽
   } catch(e) {
@@ -271,7 +270,7 @@ function checkScratchPercent(){
   const imgData=maskCtx.getImageData(0,0,maskCanvas.width,maskCanvas.height).data;
   let cleared=0;
   for(let i=3;i<imgData.length;i+=4) if(imgData[i]===0) cleared++;
-  if(cleared/(maskCanvas.width*maskCanvas.height) > 0.5) showResult(prize);
+  if(cleared/(maskCanvas.width*maskCanvas.height) > 0.5) showResult(prize, false);
 }
 
 function showResult(prizeText, repeated=false){

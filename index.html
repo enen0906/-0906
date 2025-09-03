@@ -27,8 +27,48 @@
 <div id="result">刮開看看你的獎項！</div>
 
 <script>
-// ===== 型號對照表 =====
+// ===== 型號對照表 (已新增 iPhone 16 系列) =====
 const modelMap = {
+  // iPhone 16 系列
+  "IPHONE17,3": "iPhone 16",
+  "IPHONE17,4": "iPhone 16 Plus",
+  "IPHONE17,1": "iPhone 16 Pro",
+  "IPHONE17,2": "iPhone 16 Pro Max",
+  "IPHONE17,5": "iPhone 16e",
+
+  // iPhone 15 系列
+  "IPHONE16,1": "iPhone 15 Pro",
+  "IPHONE16,2": "iPhone 15 Pro Max",
+  "IPHONE15,4": "iPhone 15",
+  "IPHONE15,5": "iPhone 15 Plus",
+  
+  // iPhone 14 系列
+  "IPHONE15,2": "iPhone 14 Pro",
+  "IPHONE15,3": "iPhone 14 Pro Max",
+  "IPHONE14,7": "iPhone 14",
+  "IPHONE14,8": "iPhone 14 Plus",
+  "IPHONE14,2": "iPhone 13 Pro",
+  "IPHONE14,3": "iPhone 13 Pro Max",
+  "IPHONE14,4": "iPhone 13 mini",
+  "IPHONE14,5": "iPhone 13",
+  "IPHONE13,1": "iPhone 12 mini",
+  "IPHONE13,2": "iPhone 12",
+  "IPHONE13,3": "iPhone 12 Pro",
+  "IPHONE13,4": "iPhone 12 Pro Max",
+  "IPHONE12,1": "iPhone 11",
+  "IPHONE12,3": "iPhone 11 Pro",
+  "IPHONE12,5": "iPhone 11 Pro Max",
+  "IPHONE11,2": "iPhone XS",
+  "IPHONE11,4": "iPhone XS Max",
+  "IPHONE11,6": "iPhone XS Max",
+  "IPHONE11,8": "iPhone XR",
+  "IPHONE10,3": "iPhone X",
+  "IPHONE10,6": "iPhone X",
+  "IPHONE14,6": "iPhone SE (第3代)",
+  "IPHONE12,8": "iPhone SE (第2代)",
+  "IPHONE8,4": "iPhone SE (第1代)",
+
+  // 其他品牌...
   "SM-G9800": "Galaxy S20","SM-G9860": "Galaxy S20+","SM-G9880": "Galaxy S20 Ultra",
   "SM-G9910": "Galaxy S21","SM-G9960": "Galaxy S21+","SM-G9980": "Galaxy S21 Ultra",
   "SM-S9010": "Galaxy S22","SM-S9060": "Galaxy S22+","SM-S9080": "Galaxy S22 Ultra",
@@ -61,11 +101,14 @@ const modelMap = {
 function guessModelName(rawModel) {
   if (!rawModel) return "未知機型";
   const key = rawModel.toUpperCase();
+  
   if (modelMap[key]) return modelMap[key];
+
+  if (key.includes("IPHONE")) return "Apple iPhone（型號未知）";
+
   if (key.startsWith("SM-A")) return "Samsung Galaxy A 系列 " + rawModel;
   if (key.startsWith("SM-S")) return "Samsung Galaxy S 系列 " + rawModel;
   if (key.startsWith("SM-F")) return "Samsung Galaxy Z 系列 " + rawModel;
-  if (key.includes("IPHONE")) return "Apple iPhone";
   if (key.includes("PIXEL")) return rawModel;
   if (key.includes("ONEPLUS")) return rawModel;
   if (key.includes("OPPO")) return rawModel;
@@ -137,7 +180,7 @@ let deviceModel = '未知';
 let userId = '未知';
 let prize = '';
 let singleDraw = false;
-let resultShown = false; // 新增變數
+let resultShown = false;
 
 // ===== 圖片設定 =====
 const images = {
@@ -150,7 +193,7 @@ const images = {
 // ===== 型號偵測 =====
 function getDeviceInfo(){
   const ua=navigator.userAgent.toLowerCase();
-  if(ua.includes('iphone')){ deviceBrand='Apple'; deviceModel='iPhone'; }
+  if(ua.includes('iphone')){ deviceBrand='Apple'; deviceModel=guessModelName(ua.match(/iphone\d+,\d+/i)?.[0]); }
   else if(ua.includes('ipad')){ deviceBrand='Apple'; deviceModel='iPad'; }
   else if(ua.includes('android')){
     const model = getAndroidModel(ua);
@@ -184,7 +227,7 @@ async function initLiff(){
     
     getDeviceInfo();
     await fetchSettings();
-    await checkRecordAndDraw(); // 新增一個檢查抽獎紀錄的函式
+    await checkRecordAndDraw();
   }
 }
 
@@ -194,11 +237,11 @@ async function checkRecordAndDraw() {
     const recordSnap = await db.ref('lottery-records/' + userId).get();
     if (recordSnap.exists()) {
       const recordedPrize = recordSnap.val().prize;
-      showResult(recordedPrize, true); // 直接顯示已抽過
-      return; // 結束函式，不執行抽獎
+      showResult(recordedPrize, true);
+      return;
     }
   }
-  await drawLottery(); // 如果沒有紀錄，就執行抽獎
+  await drawLottery();
 }
 
 // ===== 抽獎邏輯 =====
@@ -208,30 +251,60 @@ async function drawLottery(){
     const quotasSnap = await quotasRef.get();
     const quotas = quotasSnap.val();
 
+    let prize = '';
+
     const rand = Math.random();
-    if(rand < 1/303 && quotas['天選獎S1']>0) prize='天選獎S1';
-    else if(rand < 1/303 && quotas['天選獎S2']>0) prize='天選獎S2';
-    else {
-      let normal = [];
-      if(quotas['機會獎']>0) normal.push('機會獎');
-      if(quotas['命運獎']>0) normal.push('命運獎');
-      prize = normal[Math.floor(Math.random()*normal.length)];
+    if (rand < 1/303) {
+      const rarePrizes = ['天選獎S1', '天選獎S2'];
+      const shuffledPrizes = rarePrizes.sort(() => 0.5 - Math.random());
+      
+      for (const p of shuffledPrizes) {
+        if (quotas[p] > 0) {
+          prize = p;
+          break;
+        }
+      }
     }
 
-    const quotaRef = db.ref('lottery-quotas/' + prize);
-    quotaRef.transaction(current => (current||0)>0 ? current-1 : 0);
+    if (!prize) {
+      let normalPrizes = [];
+      if (quotas['機會獎'] > 0) normalPrizes.push('機會獎');
+      if (quotas['命運獎'] > 0) normalPrizes.push('命運獎');
+      
+      if (normalPrizes.length > 0) {
+        prize = normalPrizes[Math.floor(Math.random() * normalPrizes.length)];
+      } else {
+        prize = '機會獎';
+      }
+    }
+
+    if (prize) {
+      const quotaRef = db.ref('lottery-quotas/' + prize);
+      quotaRef.transaction(current => {
+        if (current > 0) {
+          return current - 1;
+        } else {
+          return 0;
+        }
+      }, (error, committed) => {
+        if (error) {
+          console.error('更新配額失敗', error);
+        } else if (committed) {
+          db.ref('lottery-records/' + userId).set({
+            prize: prize,
+            timestamp: Date.now()
+          });
+        }
+      });
+    }
 
     const statRef = db.ref(`lottery-stats/${deviceBrand}/${deviceModel}`);
     statRef.transaction(current => (current||0)+1);
 
-    db.ref('lottery-records/' + userId).set({
-      prize: prize,
-      timestamp: Date.now()
-    });
+    img.src = images[prize] || images['機會獎'];
 
-    img.src = images[prize];
   } catch(e) {
-    console.error('抽獎失敗', e);
+    console.error('抽獎或 Firebase 互動失敗', e);
     prize='機會獎';
     img.src = images[prize];
   }
@@ -282,7 +355,7 @@ function checkScratchPercent(){
 
 function showResult(prizeText, repeated = false){
   if(repeated){
-    wrapper.style.display = 'none'; // 隱藏刮刮卡
+    wrapper.style.display = 'none';
     resultDiv.innerHTML = `<div class="prize">已抽過 🎉 ${prizeText} 🎉</div>
       <div class="notice">請洽服務人員兌獎</div>`;
   } else {

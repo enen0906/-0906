@@ -58,6 +58,7 @@ let deviceModel = '未知';
 let userId = '未知';
 let prize = '';
 
+// ====== 獎項圖片 ======
 const images = {
   '天選獎S1':'https://i.postimg.cc/RCGKq4nk/6.png',
   '天選獎S2':'https://i.postimg.cc/gkxjRNkf/5.png',
@@ -65,12 +66,142 @@ const images = {
   '命運獎':'https://i.postimg.cc/RFCV0TDp/2.png'
 };
 
-// ====== 型號偵測 ======
+// ====== 型號對照表 ======
+const modelMap = {
+  // Galaxy S 系列
+  "SM-G9800": "Galaxy S20",
+  "SM-G9860": "Galaxy S20+",
+  "SM-G9880": "Galaxy S20 Ultra",
+  "SM-G9910": "Galaxy S21",
+  "SM-G9960": "Galaxy S21+",
+  "SM-G9980": "Galaxy S21 Ultra",
+  "SM-S9010": "Galaxy S22",
+  "SM-S9060": "Galaxy S22+",
+  "SM-S9080": "Galaxy S22 Ultra",
+  "SM-S9110": "Galaxy S23",
+  "SM-S9160": "Galaxy S23+",
+  "SM-S9180": "Galaxy S23 Ultra",
+  "SM-S9210": "Galaxy S24",
+  "SM-S9260": "Galaxy S24+",
+  "SM-S9280": "Galaxy S24 Ultra",
+  "SM-S9310": "Galaxy S25",
+  "SM-S9360": "Galaxy S25+",
+  "SM-S9380": "Galaxy S25 Ultra",
+  // Galaxy Z 系列
+  "SM-F7000": "Galaxy Z Flip",
+  "SM-F9160": "Galaxy Z Fold2",
+  "SM-F7110": "Galaxy Z Flip3",
+  "SM-F9260": "Galaxy Z Fold3",
+  "SM-F7210": "Galaxy Z Flip4",
+  "SM-F9360": "Galaxy Z Fold4",
+  "SM-F7310": "Galaxy Z Flip5",
+  "SM-F9460": "Galaxy Z Fold5",
+  "SM-F7410": "Galaxy Z Flip6",
+  "SM-F9560": "Galaxy Z Fold6",
+  // Galaxy A 系列
+  "SM-A5150": "Galaxy A51",
+  "SM-A7150": "Galaxy A71",
+  "SM-A3250": "Galaxy A32",
+  "SM-A5250": "Galaxy A52",
+  "SM-A5260": "Galaxy A52 5G",
+  "SM-A7250": "Galaxy A72",
+  "SM-A2660": "Galaxy A26 5G",
+  "SM-A3360": "Galaxy A33 5G",
+  "SM-A3660": "Galaxy A36 5G",
+  "SM-A5360": "Galaxy A53 5G",
+  "SM-A5660": "Galaxy A56 5G",
+  "SM-A7360": "Galaxy A73 5G",
+  "SM-A1460": "Galaxy A14 5G",
+  "SM-A2450": "Galaxy A24",
+  "SM-A3460": "Galaxy A34 5G",
+  "SM-A5460": "Galaxy A54 5G",
+  "SM-A3560": "Galaxy A35 5G",
+  "SM-A5560": "Galaxy A55 5G",
+  "SM-A1660": "Galaxy A16",
+  // 其他已有型號
+  "IPHONE": "Apple iPhone（型號未知）",
+  "PIXEL 7": "Google Pixel 7",
+  "PIXEL 7 PRO": "Google Pixel 7 Pro",
+  "PIXEL 8": "Google Pixel 8",
+  "PIXEL 8 PRO": "Google Pixel 8 Pro",
+  "PIXEL 9": "Google Pixel 9",
+  "PIXEL 9 PRO": "Google Pixel 9 Pro",
+  "ONEPLUS 9": "OnePlus 9",
+  "ONEPLUS 10": "OnePlus 10",
+  "ONEPLUS 11": "OnePlus 11",
+  "XQ-DC72": "Sony Xperia 1 V",
+  "XQ-DQ72": "Sony Xperia 5 V",
+  "23078PND5G": "Xiaomi 13T Pro",
+  "22071212AG": "Xiaomi 12T Pro",
+  "23021RAA2Y": "Redmi Note 12",
+  "23090RA98G": "Redmi Note 13 Pro",
+  "AI2205": "ASUS ROG Phone 6",
+  "AI2401": "ASUS ROG Phone 8",
+  "AI2302": "ASUS Zenfone 10",
+  "CPH2491": "OPPO Reno10",
+  "CPH2525": "OPPO Find X6",
+  "V2238": "vivo X90",
+  "V2303": "vivo Y78",
+  "RMX3820": "realme 11 Pro+",
+  "RMX3866": "realme GT Neo5"
+};
+
+// ====== 型號猜測函數 ======
+function guessModelName(rawModel){
+  if(!rawModel) return "未知機型";
+  const key = rawModel.toUpperCase();
+  if(modelMap[key]) return modelMap[key];
+  if(key.startsWith("SM-A")) return "Samsung Galaxy A 系列 " + rawModel;
+  if(key.startsWith("SM-S")) return "Samsung Galaxy S 系列 " + rawModel;
+  if(key.startsWith("SM-F")) return "Samsung Galaxy Z 系列 " + rawModel;
+  if(key.includes("IPHONE")) return "Apple iPhone";
+  return rawModel;
+}
+
+// ====== 品牌偵測 ======
+function detectBrand(modelCode){
+  const code = modelCode.toUpperCase();
+  if(code.startsWith("SM-")) return "Samsung";
+  if(code.includes("IPHONE")) return "Apple";
+  if(code.includes("PIXEL")) return "Google";
+  if(code.includes("ONEPLUS")) return "OnePlus";
+  if(code.includes("OPPO")) return "OPPO";
+  if(code.includes("ASUS")) return "ASUS";
+  if(code.includes("VIVO")) return "vivo";
+  if(code.includes("REALME")) return "realme";
+  if(code.includes("XIAOMI")||code.includes("REDMI")) return "Xiaomi";
+  return "Android";
+}
+
+// ====== Android 型號抓取 ======
+function getAndroidModel(ua){
+  const regex = /android.*;\s([^;]+)\sbuild/i;
+  let match = ua.match(regex);
+  if(match && match[1]){
+    let model = match[1].trim();
+    if(model.toLowerCase() === 'wv') return "Android裝置";
+    return model;
+  }
+  const regex2 = /android.*;\s([^;]+)\)/i;
+  match = ua.match(regex2);
+  if(match && match[1]){
+    let model = match[1].trim();
+    if(model.toLowerCase() === 'wv') return "Android裝置";
+    return model;
+  }
+  return "Android裝置";
+}
+
+// ====== 裝置偵測 ======
 function getDeviceInfo(){
-  const ua=navigator.userAgent.toLowerCase();
+  const ua = navigator.userAgent.toLowerCase();
   if(ua.includes('iphone')){ deviceBrand='Apple'; deviceModel='iPhone'; }
   else if(ua.includes('ipad')){ deviceBrand='Apple'; deviceModel='iPad'; }
-  else if(ua.includes('android')){ deviceBrand='Android'; deviceModel='Android裝置'; }
+  else if(ua.includes('android')){
+    deviceModel = getAndroidModel(ua);
+    deviceBrand = detectBrand(deviceModel);
+    deviceModel = guessModelName(deviceModel);
+  }
   else{ deviceBrand='未知'; deviceModel='未知'; }
 }
 
@@ -100,7 +231,6 @@ async function drawLottery(){
     if(rand < 1/303 && quotas['天選獎S1']>0) prize='天選獎S1';
     else if(rand < 1/303 && quotas['天選獎S2']>0) prize='天選獎S2';
     else {
-      // 機會獎/命運獎各 50%
       let normal = [];
       if(quotas['機會獎']>0) normal.push('機會獎');
       if(quotas['命運獎']>0) normal.push('命運獎');

@@ -27,7 +27,7 @@
 <div id="result">刮開看看你的獎項！</div>
 
 <script>
-// ===== 型號對照表 (已新增 iPhone 16 系列) =====
+// ===== 型號對照表 =====
 const modelMap = {
   // iPhone 16 系列
   "IPHONE17,3": "iPhone 16",
@@ -67,6 +67,7 @@ const modelMap = {
   "IPHONE14,6": "iPhone SE (第3代)",
   "IPHONE12,8": "iPhone SE (第2代)",
   "IPHONE8,4": "iPhone SE (第1代)",
+
 
   // 其他品牌...
   "SM-G9800": "Galaxy S20","SM-G9860": "Galaxy S20+","SM-G9880": "Galaxy S20 Ultra",
@@ -237,7 +238,8 @@ async function checkRecordAndDraw() {
     const recordSnap = await db.ref('lottery-records/' + userId).get();
     if (recordSnap.exists()) {
       const recordedPrize = recordSnap.val().prize;
-      showResult(recordedPrize, true);
+      // 在此處呼叫 showResult，並傳入已知的獎項名稱
+      showResult(recordedPrize, true); 
       return;
     }
   }
@@ -251,7 +253,8 @@ async function drawLottery(){
     const quotasSnap = await quotasRef.get();
     const quotas = quotasSnap.val();
 
-    let prize = '';
+    // 在此處將 prize 變數賦予一個預設值，確保它總是有值
+    prize = '';
 
     const rand = Math.random();
     if (rand < 1/303) {
@@ -348,6 +351,7 @@ function checkScratchPercent(){
   let cleared=0;
   for(let i=3;i<imgData.length;i+=4) if(imgData[i]===0) cleared++;
   if(cleared/(maskCanvas.width*maskCanvas.height) > 0.5) {
+    // 這裡改為直接呼叫 showResult，因為 drawLottery 已確保 prize 有值
     showResult(prize, false);
     resultShown = true;
   }

@@ -25,7 +25,7 @@
 
 <script>
 const LIFF_ID = '2007597530-o1xaVbZm';
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbz7VXLnqrBR1i7QBv5mMWQnlywyPCfocv0bO1kdrkRvIXgfrnBr4q7JRhdjJay3VsH9/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxeU44FnJCIMX_95cj5s_MpHepp5k9XOFMnBKT1vSvjdaA18ZvM4cc6osxp56r6UH0/exec';
 
 const wrapper = document.getElementById('wrapper');
 const bgCanvas = document.getElementById('bgCanvas');
@@ -47,7 +47,7 @@ const images = {
   '命運獎':'https://i.postimg.cc/RFCV0TDp/2.png'
 };
 
-// --- 型號偵測 ---
+// --- 型號偵測函式 ---
 function getDeviceInfo(){
   const ua=navigator.userAgent.toLowerCase();
   if(ua.includes('iphone')){ deviceBrand='Apple'; deviceModel='iPhone'; }
@@ -56,7 +56,7 @@ function getDeviceInfo(){
   else{ deviceBrand='未知'; deviceModel='未知'; }
 }
 
-// --- LIFF 初始化 ---
+// --- LIFF 登入與抓使用者 ID ---
 async function initLiff(){
   await liff.init({liffId:LIFF_ID});
   if(!liff.isLoggedIn()) liff.login();
@@ -70,26 +70,17 @@ async function initLiff(){
   }
 }
 
-// --- 從 GAS 抽獎並寫入試算表 ---
+// --- 從 GAS 抽獎 ---
 async function drawFromGAS(){
   try{
-    // 使用 POST 保證不受 CORS 限制
-    const params = new URLSearchParams({
-      action: 'draw',
-      userId,
-      deviceBrand,
-      deviceModel
-    });
-    const resp = await fetch(GAS_URL, {
-      method: 'POST',
-      body: params
-    });
+    const params = new URLSearchParams({action:'draw', userId, deviceBrand, deviceModel});
+    const resp = await fetch(GAS_URL+'?'+params.toString());
     const data = await resp.json();
     prize = data.prize || '機會獎';
-    img.src = images[prize] || images['機會獎'];
-  }catch(e){
-    console.error('抽獎失敗', e);
-    prize = '機會獎';
+    img.src = images[prize];
+  } catch(e){
+    console.error('抽獎失敗',e);
+    prize='機會獎';
     img.src = images[prize];
   }
 }

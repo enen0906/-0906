@@ -58,51 +58,51 @@ const modelMap = {
   "V2238": "vivo X90","V2303": "vivo Y78","RMX3820": "realme 11 Pro+","RMX3866": "realme GT Neo5"
 };
 
-function guessModelName(rawModel) {
-  if (!rawModel) return "未知機型";
+function guessModelName(rawModel){
+  if(!rawModel) return "未知機型";
   const key = rawModel.toUpperCase();
-  if (modelMap[key]) return modelMap[key];
-  if (key.startsWith("SM-A")) return "Samsung Galaxy A 系列 " + rawModel;
-  if (key.startsWith("SM-S")) return "Samsung Galaxy S 系列 " + rawModel;
-  if (key.startsWith("SM-F")) return "Samsung Galaxy Z 系列 " + rawModel;
-  if (key.includes("IPHONE")) return "Apple iPhone";
-  if (key.includes("PIXEL")) return rawModel;
-  if (key.includes("ONEPLUS")) return rawModel;
-  if (key.includes("OPPO")) return rawModel;
-  if (key.includes("ASUS")) return rawModel;
-  if (key.includes("VIVO")) return rawModel;
-  if (key.includes("REALME")) return rawModel;
-  if (key.includes("XIAOMI") || key.includes("REDMI")) return rawModel;
+  if(modelMap[key]) return modelMap[key];
+  if(key.startsWith("SM-A")) return "Samsung Galaxy A 系列 " + rawModel;
+  if(key.startsWith("SM-S")) return "Samsung Galaxy S 系列 " + rawModel;
+  if(key.startsWith("SM-F")) return "Samsung Galaxy Z 系列 " + rawModel;
+  if(key.includes("IPHONE")) return "Apple iPhone";
+  if(key.includes("PIXEL")) return rawModel;
+  if(key.includes("ONEPLUS")) return rawModel;
+  if(key.includes("OPPO")) return rawModel;
+  if(key.includes("ASUS")) return rawModel;
+  if(key.includes("VIVO")) return rawModel;
+  if(key.includes("REALME")) return rawModel;
+  if(key.includes("XIAOMI") || key.includes("REDMI")) return rawModel;
   return rawModel;
 }
 
-function detectBrand(modelCode) {
+function detectBrand(modelCode){
   const code = modelCode.toUpperCase();
-  if (code.startsWith("SM-")) return "Samsung";
-  if (code.includes("IPHONE")) return "Apple";
-  if (code.includes("PIXEL")) return "Google";
-  if (code.includes("ONEPLUS")) return "OnePlus";
-  if (code.includes("OPPO")) return "OPPO";
-  if (code.includes("ASUS")) return "ASUS";
-  if (code.includes("VIVO")) return "vivo";
-  if (code.includes("REALME")) return "realme";
-  if (code.includes("XIAOMI") || code.includes("REDMI")) return "Xiaomi";
+  if(code.startsWith("SM-")) return "Samsung";
+  if(code.includes("IPHONE")) return "Apple";
+  if(code.includes("PIXEL")) return "Google";
+  if(code.includes("ONEPLUS")) return "OnePlus";
+  if(code.includes("OPPO")) return "OPPO";
+  if(code.includes("ASUS")) return "ASUS";
+  if(code.includes("VIVO")) return "vivo";
+  if(code.includes("REALME")) return "realme";
+  if(code.includes("XIAOMI") || code.includes("REDMI")) return "Xiaomi";
   return "Android";
 }
 
-function getAndroidModel(ua) {
+function getAndroidModel(ua){
   const regex = /android.*;\s([^;]+)\sbuild/i;
   let match = ua.match(regex);
-  if (match && match[1]) {
+  if(match && match[1]){
     let model = match[1].trim();
-    if (model.toLowerCase() === 'wv') return "Android裝置";
+    if(model.toLowerCase() === 'wv') return "Android裝置";
     return model;
   }
   const regex2 = /android.*;\s([^;]+)\)/i;
   match = ua.match(regex2);
-  if (match && match[1]) {
+  if(match && match[1]){
     let model = match[1].trim();
-    if (model.toLowerCase() === 'wv') return "Android裝置";
+    if(model.toLowerCase() === 'wv') return "Android裝置";
     return model;
   }
   return "Android裝置";
@@ -190,14 +190,19 @@ async function initLiff(){
 // ===== 抽獎邏輯 =====
 async function drawLottery(){
   try {
+    let isRepeat = false;
+
     if(singleDraw){
       const recordSnap = await db.ref('lottery-records/' + userId).get();
       if(recordSnap.exists()){
-        showResult("已抽過");
+        isRepeat = true;
+        prize = recordSnap.val().prize; // 取得之前的獎項
+        showResult(isRepeat, prize);
         return;
       }
     }
 
+    // 抽獎
     const quotasRef = db.ref('lottery-quotas');
     const quotasSnap = await quotasRef.get();
     const quotas = quotasSnap.val();
@@ -224,11 +229,28 @@ async function drawLottery(){
     });
 
     img.src = images[prize];
-  } catch(e) {
+
+    showResult(isRepeat, prize);
+
+  } catch(e){
     console.error('抽獎失敗', e);
     prize='機會獎';
     img.src = images[prize];
+    showResult(false, prize);
   }
+}
+
+// ===== 顯示結果 =====
+function showResult(isRepeat, prizeText){
+  if(isRepeat){
+    resultDiv.innerHTML = `<div class="prize">已抽過 🎉 ${prizeText} 🎉</div>
+      <div class="notice">請洽服務人員兌獎</div>`;
+  } else {
+    resultDiv.innerHTML = `<div class="prize">恭喜抽中🎉 ${prizeText} 🎉</div>
+      <div class="notice">請洽服務人員兌獎</div>`;
+  }
+  resultDiv.style.display='block';
+  maskCanvas.style.pointerEvents='none';
 }
 
 // ===== 畫布設定 =====
@@ -267,17 +289,9 @@ function checkScratchPercent(){
   const imgData=maskCtx.getImageData(0,0,maskCanvas.width,maskCanvas.height).data;
   let cleared=0;
   for(let i=3;i<imgData.length;i+=4) if(imgData[i]===0) cleared++;
-  if(cleared/(maskCanvas.width*maskCanvas.height) > 0.5) showResult(prize);
+  if(cleared/(maskCanvas.width*maskCanvas.height) > 0.5) showResult(false, prize);
 }
 
-function showResult(prizeText){
-  resultDiv.innerHTML = `<div class="prize">🎉 ${prizeText} 🎉</div>
-    <div class="notice">請洽服務人員兌獎</div>`;
-  resultDiv.style.display='block';
-  maskCanvas.style.pointerEvents='none';
-}
-
-// ===== 綁定事件 =====
 maskCanvas.addEventListener('mousedown',e=>{isDrawing=true;scratch(e);});
 maskCanvas.addEventListener('mousemove',scratch);
 maskCanvas.addEventListener('mouseup',()=>{isDrawing=false; checkScratchPercent();});

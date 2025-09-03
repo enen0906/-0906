@@ -137,6 +137,7 @@ let deviceModel = '未知';
 let userId = '未知';
 let prize = '';
 let singleDraw = false;
+let resultShown = false; // 新增變數
 
 // ===== 圖片設定 =====
 const images = {
@@ -165,7 +166,6 @@ async function fetchSettings(){
     const snapshot = await db.ref('settings/singleDraw').get();
     if(snapshot.exists()){
       singleDraw = snapshot.val() === true;
-      console.log('singleDraw =', singleDraw, typeof singleDraw);
     }
   } catch(e){
     console.error('讀取設定失敗', e);
@@ -181,24 +181,29 @@ async function initLiff(){
       const profile=await liff.getProfile(); 
       userId=profile.userId||'未知'; 
     } catch(err){ console.error('無法取得使用者ID',err);}
+    
     getDeviceInfo();
     await fetchSettings();
-    await drawLottery(); // 一進入先執行抽獎，但**不顯示結果**
+    await checkRecordAndDraw(); // 新增一個檢查抽獎紀錄的函式
   }
+}
+
+// ===== 檢查抽獎紀錄與執行抽獎 =====
+async function checkRecordAndDraw() {
+  if (singleDraw) {
+    const recordSnap = await db.ref('lottery-records/' + userId).get();
+    if (recordSnap.exists()) {
+      const recordedPrize = recordSnap.val().prize;
+      showResult(recordedPrize, true); // 直接顯示已抽過
+      return; // 結束函式，不執行抽獎
+    }
+  }
+  await drawLottery(); // 如果沒有紀錄，就執行抽獎
 }
 
 // ===== 抽獎邏輯 =====
 async function drawLottery(){
   try {
-    if(singleDraw){
-      const recordSnap = await db.ref('lottery-records/' + userId).get();
-      if(recordSnap.exists()){
-        prize = recordSnap.val().prize;
-        img.src = images[prize];
-        return;
-      }
-    }
-
     const quotasRef = db.ref('lottery-quotas');
     const quotasSnap = await quotasRef.get();
     const quotas = quotasSnap.val();
@@ -255,7 +260,7 @@ function getPos(e){
 }
 
 function scratch(e){
-  if(!isDrawing) return;
+  if(!isDrawing || resultShown) return;
   e.preventDefault();
   const {x,y}=getPos(e);
   maskCtx.globalCompositeOperation='destination-out';
@@ -264,45 +269,28 @@ function scratch(e){
   maskCtx.fill();
 }
 
-let resultShown = false; // 新增一個變數來避免重複顯示結果
 function checkScratchPercent(){
   if(resultShown) return;
   const imgData=maskCtx.getImageData(0,0,maskCanvas.width,maskCanvas.height).data;
   let cleared=0;
   for(let i=3;i<imgData.length;i+=4) if(imgData[i]===0) cleared++;
   if(cleared/(maskCanvas.width*maskCanvas.height) > 0.5) {
-    showResult(prize);
+    showResult(prize, false);
     resultShown = true;
   }
 }
 
-function showResult(prizeText){
-  // 檢查是否為重複抽獎
-  db.ref('lottery-records/' + userId).get().then(recordSnap => {
-    let repeated = false;
-    if (recordSnap.exists() && recordSnap.val().prize === prizeText) {
-      // 這裡判斷是不是重複抽獎，但因為上面的邏輯已經處理過了，
-      // 所以這裡主要是用來顯示不同的訊息。
-      // 為了簡化邏輯，我們可以直接在 `drawLottery` 判斷。
-    }
-
-    if(singleDraw && recordSnap.exists()){
-      resultDiv.innerHTML = `<div class="prize">已抽過 🎉 ${prizeText} 🎉</div>
-        <div class="notice">請洽服務人員兌獎</div>`;
-    } else {
-      resultDiv.innerHTML = `<div class="prize">恭喜抽中🎉 ${prizeText} 🎉</div>
-        <div class="notice">請洽服務人員兌獎</div>`;
-    }
-
-    resultDiv.style.display='block';
-    maskCanvas.style.pointerEvents='none';
-  }).catch(e => {
-    console.error('查詢抽獎紀錄失敗', e);
+function showResult(prizeText, repeated = false){
+  if(repeated){
+    wrapper.style.display = 'none'; // 隱藏刮刮卡
+    resultDiv.innerHTML = `<div class="prize">已抽過 🎉 ${prizeText} 🎉</div>
+      <div class="notice">請洽服務人員兌獎</div>`;
+  } else {
     resultDiv.innerHTML = `<div class="prize">恭喜抽中🎉 ${prizeText} 🎉</div>
       <div class="notice">請洽服務人員兌獎</div>`;
-    resultDiv.style.display='block';
-    maskCanvas.style.pointerEvents='none';
-  });
+  }
+  resultDiv.style.display='block';
+  maskCanvas.style.pointerEvents='none';
 }
 
 // ===== 綁定事件 =====

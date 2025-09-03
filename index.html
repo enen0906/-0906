@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>🌟大學星生活🌟刮刮卡</title>
 <style>
-  body { margin:0; padding:0; font-family:Arial,sans-serif; background:#f8f8f8; text-align:center; }
-  h1 { margin:15px 0; color:#333; font-size:clamp(20px,5vw,32px); }
-  #wrapper { position:relative; display:inline-block; width:95vw; max-width:400px; margin:auto; }
-  canvas { border:2px solid #ccc; border-radius:12px; display:block; width:100%; height:auto; }
-  #result { margin-top:15px; font-size:clamp(16px,4vw,22px); color:#333; font-weight:bold; display:none; }
-  .prize { font-size:clamp(24px,6vw,40px); font-weight:700; color:#c00; margin-bottom:6px; white-space:nowrap; }
-  .notice { font-size:clamp(14px,3.5vw,18px); color:#e60000; font-weight:500; }
+  body { margin:0; padding:0; font-family:Arial,sans-serif; background:#f8f8f8; text-align:center;}
+  h1 { margin:15px 0; color:#333; font-size:clamp(20px,5vw,32px);}
+  #wrapper { position:relative; display:inline-block; width:95vw; max-width:400px; margin:auto;}
+  canvas { border:2px solid #ccc; border-radius:12px; display:block; width:100%; height:auto;}
+  #result { margin-top:15px; font-size:clamp(16px,4vw,22px); color:#333; font-weight:bold; display:none;}
+  .prize { font-size:clamp(24px,6vw,40px); font-weight:700; color:#c00; margin-bottom:6px; white-space:nowrap;}
+  .notice { font-size:clamp(14px,3.5vw,18px); color:#e60000; font-weight:500;}
 </style>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
@@ -24,7 +24,7 @@
 <div id="result">刮開看看你的獎項！</div>
 
 <script>
-const LIFF_ID = '2007597530-o1xaVbZm';
+const LIFF_ID = '2007597530-o1xaVbZm';  // 替換為LIFF ID
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbz7VXLnqrBR1i7QBv5mMWQnlywyPCfocv0bO1kdrkRvIXgfrnBr4q7JRhdjJay3VsH9/exec';
 
 const wrapper = document.getElementById('wrapper');
@@ -40,22 +40,22 @@ let userId = '未知';
 let prize = '';
 
 const images = {
-  '天選獎S1': 'https://i.postimg.cc/RCGKq4nk/6.png',
-  '天選獎S2': 'https://i.postimg.cc/gkxjRNkf/5.png',
-  '機會獎': 'https://i.postimg.cc/3xpwfNG1/3.png',
-  '命運獎': 'https://i.postimg.cc/RFCV0TDp/2.png'
+  '天選獎S1':'https://i.postimg.cc/RCGKq4nk/6.png',
+  '天選獎S2':'https://i.postimg.cc/gkxjRNkf/5.png',
+  '機會獎':'https://i.postimg.cc/3xpwfNG1/3.png',
+  '命運獎':'https://i.postimg.cc/RFCV0TDp/2.png'
 };
 
 function getDeviceInfo() {
   const ua = navigator.userAgent.toLowerCase();
-  if (ua.includes('iphone')) { deviceBrand = 'Apple'; deviceModel = 'iPhone'; }
-  else if (ua.includes('ipad')) { deviceBrand = 'Apple'; deviceModel = 'iPad'; }
-  else if (ua.includes('android')) { deviceBrand = 'Android'; deviceModel = 'Android裝置'; }
-  else { deviceBrand = '未知'; deviceModel = '未知'; }
+  if (ua.includes('iphone')) { deviceBrand='Apple'; deviceModel='iPhone'; }
+  else if (ua.includes('ipad')) { deviceBrand='Apple'; deviceModel='iPad'; }
+  else if (ua.includes('android')) { deviceBrand='Android'; deviceModel='Android裝置'; }
+  else { deviceBrand='未知'; deviceModel='未知'; }
 }
 
 async function initLiff() {
-  await liff.init({ liffId: LIFF_ID });
+  await liff.init({liffId: LIFF_ID});
   if (!liff.isLoggedIn()) {
     liff.login();
   } else {
@@ -101,7 +101,7 @@ let isDrawing = false;
 function getPos(e) {
   const rect = maskCanvas.getBoundingClientRect();
   if (e.touches && e.touches.length > 0) return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
-  else return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
 }
 
 function scratch(e) {
@@ -117,16 +117,16 @@ function scratch(e) {
 function checkScratchPercent() {
   const imgData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height).data;
   let cleared = 0;
-  for (let i = 3; i < imgData.length; i += 4) {
-    if (imgData[i] === 0) cleared++;
+  for(let i = 3; i < imgData.length; i += 4) {
+    if(imgData[i] === 0) cleared++;
   }
   if (cleared / (maskCanvas.width * maskCanvas.height) > 0.5) showResult(prize);
 }
 
 function showResult(prizeText) {
   resultDiv.innerHTML = `
-    <div class="prize">🎉 ${prizeText === '已抽過' ? prizeText : `恭喜你中了【${prizeText}】`} 🎉</div>
-    <div class="notice">${prizeText === '已抽過' ? '' : '請洽服務人員兌獎'}</div>
+    <div class="prize">🎉 ${prizeText == '已抽過' ? prizeText : `恭喜你中了【${prizeText}】`} 🎉</div>
+    <div class="notice">${prizeText == '已抽過' ? '' : '請洽服務人員兌獎'}</div>
   `;
   resultDiv.style.display = 'block';
   maskCanvas.style.pointerEvents = 'none';

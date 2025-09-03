@@ -13,7 +13,6 @@
   .prize { font-size:clamp(24px,6vw,40px); font-weight:700; color:#c00; margin-bottom:6px; white-space:nowrap; }
   .notice { font-size:clamp(14px,3.5vw,18px); color:#e60000; font-weight:500; }
 </style>
-
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -24,7 +23,7 @@
   <canvas id="bgCanvas"></canvas>
   <canvas id="maskCanvas" style="position:absolute;top:0;left:0;"></canvas>
 </div>
-<div id="result">刮開看看你的獎項！</div>
+<div id="result"></div>
 
 <script>
 // ===== 型號對照表 =====
@@ -58,54 +57,44 @@ const modelMap = {
   "V2238": "vivo X90","V2303": "vivo Y78","RMX3820": "realme 11 Pro+","RMX3866": "realme GT Neo5"
 };
 
-function guessModelName(rawModel){
-  if(!rawModel) return "未知機型";
+// ===== 型號偵測 =====
+function guessModelName(rawModel) {
+  if (!rawModel) return "未知機型";
   const key = rawModel.toUpperCase();
-  if(modelMap[key]) return modelMap[key];
-  if(key.startsWith("SM-A")) return "Samsung Galaxy A 系列 " + rawModel;
-  if(key.startsWith("SM-S")) return "Samsung Galaxy S 系列 " + rawModel;
-  if(key.startsWith("SM-F")) return "Samsung Galaxy Z 系列 " + rawModel;
-  if(key.includes("IPHONE")) return "Apple iPhone";
-  if(key.includes("PIXEL")) return rawModel;
-  if(key.includes("ONEPLUS")) return rawModel;
-  if(key.includes("OPPO")) return rawModel;
-  if(key.includes("ASUS")) return rawModel;
-  if(key.includes("VIVO")) return rawModel;
-  if(key.includes("REALME")) return rawModel;
-  if(key.includes("XIAOMI") || key.includes("REDMI")) return rawModel;
-  return rawModel;
+  return modelMap[key] || rawModel;
 }
-
-function detectBrand(modelCode){
+function detectBrand(modelCode) {
   const code = modelCode.toUpperCase();
-  if(code.startsWith("SM-")) return "Samsung";
-  if(code.includes("IPHONE")) return "Apple";
-  if(code.includes("PIXEL")) return "Google";
-  if(code.includes("ONEPLUS")) return "OnePlus";
-  if(code.includes("OPPO")) return "OPPO";
-  if(code.includes("ASUS")) return "ASUS";
-  if(code.includes("VIVO")) return "vivo";
-  if(code.includes("REALME")) return "realme";
-  if(code.includes("XIAOMI") || code.includes("REDMI")) return "Xiaomi";
+  if (code.startsWith("SM-")) return "Samsung";
+  if (code.includes("IPHONE")) return "Apple";
+  if (code.includes("PIXEL")) return "Google";
+  if (code.includes("ONEPLUS")) return "OnePlus";
+  if (code.includes("OPPO")) return "OPPO";
+  if (code.includes("ASUS")) return "ASUS";
+  if (code.includes("VIVO")) return "vivo";
+  if (code.includes("REALME")) return "realme";
+  if (code.includes("XIAOMI") || code.includes("REDMI")) return "Xiaomi";
   return "Android";
 }
-
 function getAndroidModel(ua){
-  const regex = /android.*;\s([^;]+)\sbuild/i;
-  let match = ua.match(regex);
-  if(match && match[1]){
-    let model = match[1].trim();
-    if(model.toLowerCase() === 'wv') return "Android裝置";
-    return model;
-  }
-  const regex2 = /android.*;\s([^;]+)\)/i;
-  match = ua.match(regex2);
-  if(match && match[1]){
-    let model = match[1].trim();
-    if(model.toLowerCase() === 'wv') return "Android裝置";
-    return model;
-  }
+  const regex=/android.*;\s([^;]+)\sbuild/i;
+  let match=ua.match(regex);
+  if(match && match[1]) return match[1].trim();
+  const regex2=/android.*;\s([^;]+)\)/i;
+  match=ua.match(regex2);
+  if(match && match[1]) return match[1].trim();
   return "Android裝置";
+}
+function getDeviceInfo(){
+  const ua=navigator.userAgent.toLowerCase();
+  if(ua.includes('iphone')){ deviceBrand='Apple'; deviceModel='iPhone'; }
+  else if(ua.includes('ipad')){ deviceBrand='Apple'; deviceModel='iPad'; }
+  else if(ua.includes('android')){
+    const model=getAndroidModel(ua);
+    deviceModel=guessModelName(model);
+    deviceBrand=detectBrand(model);
+  }
+  else{ deviceBrand='未知'; deviceModel='未知'; }
 }
 
 // ===== Firebase 設定 =====
@@ -119,7 +108,7 @@ const firebaseConfig = {
   appId: "YOUR_APP_ID"
 };
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const db=firebase.database();
 
 // ===== LIFF 設定 =====
 const LIFF_ID = '2007597530-o1xaVbZm';
@@ -132,11 +121,7 @@ const bgCtx = bgCanvas.getContext('2d');
 const maskCtx = maskCanvas.getContext('2d');
 const resultDiv = document.getElementById('result');
 
-let deviceBrand = '未知';
-let deviceModel = '未知';
-let userId = '未知';
-let prize = '';
-let singleDraw = false;
+let deviceBrand='未知', deviceModel='未知', userId='未知', prize='', singleDraw=false, prizeDetermined=false;
 
 // ===== 圖片設定 =====
 const images = {
@@ -146,120 +131,70 @@ const images = {
   '命運獎':'https://i.postimg.cc/RFCV0TDp/2.png'
 };
 
-// ===== 型號偵測 =====
-function getDeviceInfo(){
-  const ua=navigator.userAgent.toLowerCase();
-  if(ua.includes('iphone')){ deviceBrand='Apple'; deviceModel='iPhone'; }
-  else if(ua.includes('ipad')){ deviceBrand='Apple'; deviceModel='iPad'; }
-  else if(ua.includes('android')){
-    const model = getAndroidModel(ua);
-    deviceModel = guessModelName(model);
-    deviceBrand = detectBrand(model);
-  }
-  else{ deviceBrand='未知'; deviceModel='未知'; }
-}
-
-// ===== 讀取後台設定 =====
+// ===== 初始化 LIFF =====
 async function fetchSettings(){
   try {
     const snapshot = await db.ref('settings/singleDraw').get();
-    if(snapshot.exists()){
-      singleDraw = snapshot.val() === true;
-      console.log('singleDraw =', singleDraw, typeof singleDraw);
-    }
-  } catch(e){
-    console.error('讀取設定失敗', e);
-  }
+    if(snapshot.exists()) singleDraw = snapshot.val()===true;
+  } catch(e){ console.error(e); }
 }
 
-// ===== LIFF 初始化 =====
 async function initLiff(){
   await liff.init({liffId:LIFF_ID});
   if(!liff.isLoggedIn()) liff.login();
   else{
-    try{ 
-      const profile=await liff.getProfile(); 
-      userId=profile.userId||'未知'; 
-    } catch(err){ console.error('無法取得使用者ID',err);}
+    try{ const profile = await liff.getProfile(); userId=profile.userId||'未知'; } catch{}
     getDeviceInfo();
     await fetchSettings();
-    await drawLottery();
+    checkFirstDraw();
   }
 }
 
-// ===== 抽獎邏輯 =====
-async function drawLottery(){
-  try {
-    let isRepeat = false;
-
-    if(singleDraw){
-      const recordSnap = await db.ref('lottery-records/' + userId).get();
-      if(recordSnap.exists()){
-        isRepeat = true;
-        prize = recordSnap.val().prize; // 取得之前的獎項
-        showResult(isRepeat, prize);
-        return;
-      }
+// ===== 檢查是否重複抽 =====
+async function checkFirstDraw(){
+  if(singleDraw){
+    const recordSnap = await db.ref('lottery-records/' + userId).get();
+    if(recordSnap.exists()){
+      prize = recordSnap.val().prize;
+      prizeDetermined = true;
+      showResult(`已抽過 🎉 ${prize} 🎉`);
+      maskCanvas.style.pointerEvents='none'; // 禁止刮卡
     }
+  }
+}
 
-    // 抽獎
-    const quotasRef = db.ref('lottery-quotas');
-    const quotasSnap = await quotasRef.get();
+// ===== 抽獎 =====
+async function drawLottery(){
+  try{
+    const quotasSnap = await db.ref('lottery-quotas').get();
     const quotas = quotasSnap.val();
-
-    const rand = Math.random();
-    if(rand < 1/303 && quotas['天選獎S1']>0) prize='天選獎S1';
-    else if(rand < 1/303 && quotas['天選獎S2']>0) prize='天選獎S2';
+    const rand=Math.random();
+    if(rand<1/303 && quotas['天選獎S1']>0) prize='天選獎S1';
+    else if(rand<1/303 && quotas['天選獎S2']>0) prize='天選獎S2';
     else {
-      let normal = [];
+      let normal=[];
       if(quotas['機會獎']>0) normal.push('機會獎');
       if(quotas['命運獎']>0) normal.push('命運獎');
-      prize = normal[Math.floor(Math.random()*normal.length)];
+      prize=normal[Math.floor(Math.random()*normal.length)];
     }
 
-    const quotaRef = db.ref('lottery-quotas/' + prize);
-    quotaRef.transaction(current => (current||0)>0 ? current-1 : 0);
-
-    const statRef = db.ref(`lottery-stats/${deviceBrand}/${deviceModel}`);
-    statRef.transaction(current => (current||0)+1);
-
-    db.ref('lottery-records/' + userId).set({
-      prize: prize,
-      timestamp: Date.now()
-    });
-
-    img.src = images[prize];
-
-    showResult(isRepeat, prize);
-
+    db.ref('lottery-quotas/'+prize).transaction(current => (current||0)>0?current-1:0);
+    db.ref('lottery-records/'+userId).set({ prize: prize, timestamp: Date.now() });
+    showResult(`恭喜抽中🎉 ${prize} 🎉`);
   } catch(e){
-    console.error('抽獎失敗', e);
+    console.error(e);
     prize='機會獎';
-    img.src = images[prize];
-    showResult(false, prize);
+    showResult(`恭喜抽中🎉 ${prize} 🎉`);
   }
-}
-
-// ===== 顯示結果 =====
-function showResult(isRepeat, prizeText){
-  if(isRepeat){
-    resultDiv.innerHTML = `<div class="prize">已抽過 🎉 ${prizeText} 🎉</div>
-      <div class="notice">請洽服務人員兌獎</div>`;
-  } else {
-    resultDiv.innerHTML = `<div class="prize">恭喜抽中🎉 ${prizeText} 🎉</div>
-      <div class="notice">請洽服務人員兌獎</div>`;
-  }
-  resultDiv.style.display='block';
-  maskCanvas.style.pointerEvents='none';
 }
 
 // ===== 畫布設定 =====
 function setCanvasSize(){
   const width = wrapper.clientWidth;
   const height = Math.floor(width*1350/1080);
-  wrapper.style.height = height+'px';
-  bgCanvas.width = maskCanvas.width = width;
-  bgCanvas.height = maskCanvas.height = height;
+  wrapper.style.height=height+'px';
+  bgCanvas.width=maskCanvas.width=width;
+  bgCanvas.height=maskCanvas.height=height;
 }
 
 function initMask(){
@@ -274,9 +209,8 @@ function getPos(e){
   if(e.touches && e.touches.length>0) return {x:e.touches[0].clientX-rect.left, y:e.touches[0].clientY-rect.top};
   else return {x:e.clientX-rect.left, y:e.clientY-rect.top};
 }
-
 function scratch(e){
-  if(!isDrawing) return;
+  if(!isDrawing || prizeDetermined) return;
   e.preventDefault();
   const {x,y}=getPos(e);
   maskCtx.globalCompositeOperation='destination-out';
@@ -284,14 +218,25 @@ function scratch(e){
   maskCtx.arc(x,y,50,0,Math.PI*2);
   maskCtx.fill();
 }
-
 function checkScratchPercent(){
+  if(prizeDetermined) return;
   const imgData=maskCtx.getImageData(0,0,maskCanvas.width,maskCanvas.height).data;
   let cleared=0;
   for(let i=3;i<imgData.length;i+=4) if(imgData[i]===0) cleared++;
-  if(cleared/(maskCanvas.width*maskCanvas.height) > 0.5) showResult(false, prize);
+  if(cleared/(maskCanvas.width*maskCanvas.height)>0.5){
+    prizeDetermined=true;
+    drawLottery();
+  }
 }
 
+// ===== 顯示結果 =====
+function showResult(text){
+  resultDiv.innerHTML=`<div class="prize">${text}</div><div class="notice">請洽服務人員兌獎</div>`;
+  resultDiv.style.display='block';
+  if(prizeDetermined) maskCanvas.style.pointerEvents='none';
+}
+
+// ===== 綁定事件 =====
 maskCanvas.addEventListener('mousedown',e=>{isDrawing=true;scratch(e);});
 maskCanvas.addEventListener('mousemove',scratch);
 maskCanvas.addEventListener('mouseup',()=>{isDrawing=false; checkScratchPercent();});
@@ -303,6 +248,7 @@ maskCanvas.addEventListener('touchend',()=>{isDrawing=false; checkScratchPercent
 // ===== 載入圖片 =====
 const img=new Image();
 img.crossOrigin='anonymous';
+img.src=images['機會獎'];
 img.onload=()=>{
   setCanvasSize();
   bgCtx.drawImage(img,0,0,bgCanvas.width,bgCanvas.height);

@@ -13,9 +13,12 @@
   .prize { font-size:clamp(24px,6vw,40px); font-weight:700; color:#c00; margin-bottom:6px; white-space:nowrap; }
   .notice { font-size:clamp(14px,3.5vw,18px); color:#e60000; font-weight:500; }
 </style>
+
+<!-- LIFF SDK -->
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
 <h1>🌟大學星生活🌟</h1>
@@ -26,18 +29,23 @@
 <div id="result">刮開看看你的獎項！</div>
 
 <script>
-const LIFF_ID = '2007597530-o1xaVbZm';
-
-// --- Firebase 設定 ---
+// ====== Firebase 設定 ======
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
   authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  databaseURL: "https://guaguaca-b97ad-default-rtdb.asia-southeast1.firebasedatabase.app",
+  databaseURL: "https://guaguaca-b97ad-default-rtdb.asia-southeast1.firebasedatabase.app/",
   projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+// ====== LIFF 設定 ======
+const LIFF_ID = '2007597530-o1xaVbZm';
+
+// ====== DOM ======
 const wrapper = document.getElementById('wrapper');
 const bgCanvas = document.getElementById('bgCanvas');
 const maskCanvas = document.getElementById('maskCanvas');
@@ -48,7 +56,6 @@ const resultDiv = document.getElementById('result');
 let deviceBrand = '未知';
 let deviceModel = '未知';
 let userId = '未知';
-let hasSentData = false;
 let prize = '';
 
 const images = {
@@ -58,15 +65,16 @@ const images = {
   '命運獎':'https://i.postimg.cc/RFCV0TDp/2.png'
 };
 
-// --- 型號偵測 ---
+// ====== 型號偵測 ======
 function getDeviceInfo(){
   const ua=navigator.userAgent.toLowerCase();
   if(ua.includes('iphone')){ deviceBrand='Apple'; deviceModel='iPhone'; }
   else if(ua.includes('ipad')){ deviceBrand='Apple'; deviceModel='iPad'; }
   else if(ua.includes('android')){ deviceBrand='Android'; deviceModel='Android裝置'; }
+  else{ deviceBrand='未知'; deviceModel='未知'; }
 }
 
-// --- LIFF 登入與抓使用者 ID ---
+// ====== LIFF 初始化 ======
 async function initLiff(){
   await liff.init({liffId:LIFF_ID});
   if(!liff.isLoggedIn()) liff.login();
@@ -76,61 +84,47 @@ async function initLiff(){
       userId=profile.userId||'未知'; 
     } catch(err){ console.error('無法取得使用者ID',err);}
     getDeviceInfo();
-    await drawFromFirebase();
+    await drawLottery();
   }
 }
 
-// --- 抽獎邏輯 ---
-async function drawFromFirebase(){
-  try{
+// ====== 抽獎邏輯 ======
+async function drawLottery(){
+  try {
     const quotasRef = db.ref('lottery-quotas');
-    let quotas = (await quotasRef.get()).val();
+    const quotasSnap = await quotasRef.get();
+    const quotas = quotasSnap.val();
 
-    if(!quotas) {
-      alert('獎項資料未初始化!');
-      return;
+    // 天選獎 S1、S2 機率 1/303
+    const rand = Math.random();
+    if(rand < 1/303 && quotas['天選獎S1']>0) prize='天選獎S1';
+    else if(rand < 1/303 && quotas['天選獎S2']>0) prize='天選獎S2';
+    else {
+      // 機會獎/命運獎各 50%
+      let normal = [];
+      if(quotas['機會獎']>0) normal.push('機會獎');
+      if(quotas['命運獎']>0) normal.push('命運獎');
+      prize = normal[Math.floor(Math.random()*normal.length)];
     }
 
-    // 將可抽獎項整理成陣列
-    let available = [];
-    for(const key in quotas){
-      if(quotas[key] > 0) available.push(key);
-    }
+    // 減掉 quota
+    const quotaRef = db.ref('lottery-quotas/' + prize);
+    quotaRef.transaction(current => (current||0)>0 ? current-1 : 0);
 
-    if(available.length === 0){
-      prize = '機會獎';
-    } else {
-      // 隨機抽天選獎 S1/S2 機率 1/303，否則機會/命運獎平均
-      let rand = Math.random();
-      if(rand < 1/303 && quotas['天選獎S1'] > 0) prize = '天選獎S1';
-      else if(rand < 1/303 && quotas['天選獎S2'] > 0) prize = '天選獎S2';
-      else {
-        let normal = available.filter(p=>p!=='天選獎S1' && p!=='天選獎S2');
-        prize = normal[Math.floor(Math.random()*normal.length)];
-      }
-    }
+    // 累計統計
+    const statRef = db.ref(`lottery-stats/${deviceBrand}/${deviceModel}`);
+    statRef.transaction(current => (current||0)+1);
 
-    // 更新 Firebase quota
-    if(quotas[prize] && quotas[prize] > 0){
-      quotas[prize] -= 1;
-      await quotasRef.set(quotas);
-    }
-
-    // 記錄抽獎資料
-    await db.ref('lottery-records').push({
-      userId, deviceBrand, deviceModel, prize, timestamp: Date.now()
-    });
-
+    // 設定背景圖
     img.src = images[prize];
-
-  } catch(e){
+  } catch(e) {
     console.error('抽獎失敗', e);
-    prize = '機會獎';
+    prize='機會獎';
     img.src = images[prize];
   }
 }
 
-// --- 畫布設定 ---
+// ====== 畫布設定 ======
 function setCanvasSize(){
   const width = wrapper.clientWidth;
   const height = Math.floor(width*1350/1080);
@@ -144,7 +138,7 @@ function initMask(){
   maskCtx.fillRect(0,0,maskCanvas.width,maskCanvas.height);
 }
 
-// --- 刮刮卡邏輯 ---
+// ====== 刮刮卡 ======
 let isDrawing=false;
 function getPos(e){
   const rect=maskCanvas.getBoundingClientRect();
@@ -176,7 +170,7 @@ function showResult(prizeText){
   maskCanvas.style.pointerEvents='none';
 }
 
-// --- 綁定事件 ---
+// ====== 綁定事件 ======
 maskCanvas.addEventListener('mousedown',e=>{isDrawing=true;scratch(e);});
 maskCanvas.addEventListener('mousemove',scratch);
 maskCanvas.addEventListener('mouseup',()=>{isDrawing=false; checkScratchPercent();});
@@ -185,7 +179,7 @@ maskCanvas.addEventListener('touchstart',e=>{isDrawing=true;scratch(e);},{passiv
 maskCanvas.addEventListener('touchmove',scratch,{passive:false});
 maskCanvas.addEventListener('touchend',()=>{isDrawing=false; checkScratchPercent();});
 
-// --- 載入圖片 ---
+// ====== 載入圖片 ======
 const img=new Image();
 img.crossOrigin='anonymous';
 img.onload=()=>{
@@ -199,7 +193,7 @@ window.addEventListener('resize',()=>{
   initMask();
 });
 
-// --- 初始化 ---
+// ====== 初始化 ======
 initLiff();
 </script>
 </body>

@@ -47,7 +47,7 @@ const images = {
   '命運獎':'https://i.postimg.cc/RFCV0TDp/2.png'
 };
 
-// --- 型號偵測函式 ---
+// --- 型號偵測 ---
 function getDeviceInfo(){
   const ua=navigator.userAgent.toLowerCase();
   if(ua.includes('iphone')){ deviceBrand='Apple'; deviceModel='iPhone'; }
@@ -66,45 +66,22 @@ async function initLiff(){
       userId=profile.userId||'未知'; 
     } catch(err){ console.error('無法取得使用者ID',err);}
     getDeviceInfo();
-    await checkDrawAndInitPrize();
+    await fetchPrizeFromGAS();
   }
 }
 
-// --- 檢查是否已抽過 + 抽獎 ---
-async function checkDrawAndInitPrize(){
+// --- 從 GAS 取得抽獎結果 ---
+async function fetchPrizeFromGAS(){
   try{
-    const respCheck = await fetch(`${GAS_URL}?action=check_draw&userId=${userId}`);
-    const dataCheck = await respCheck.json();
-    if(dataCheck.hasDrawn){
-      prize='已抽過';
-      showResult('已抽過');
-      return;
-    }
-
-    // 取得剩餘獎項
-    const respRemaining = await fetch(`${GAS_URL}?action=get_remaining`);
-    const remainingData = await respRemaining.json();
-    prize = drawPrize(remainingData); // 本地抽獎，保證一定有剩餘獎項
-    img.src = images[prize];
-  }catch(e){ 
-    console.error('抽獎失敗',e); 
-    prize='機會獎'; // 保底
+    const resp = await fetch(`${GAS_URL}?action=draw&userId=${userId}&deviceBrand=${deviceBrand}&deviceModel=${deviceModel}`);
+    const data = await resp.json();
+    prize = data.prize || '機會獎'; // fallback
+    img.src = images[prize] || images['機會獎'];
+  }catch(e){
+    console.error('抽獎失敗',e);
+    prize='機會獎'; // fallback
     img.src = images[prize];
   }
-}
-
-// --- 前端抽獎邏輯 ---
-function drawPrize(remaining){
-  const keys = Object.keys(remaining);
-  if(keys.length===0) return '機會獎'; // 保底
-  const rand = Math.random();
-  if(rand<1/303 && remaining['天選獎S1']) return '天選獎S1';
-  if(rand<1/303 && remaining['天選獎S2']) return '天選獎S2';
-  // 機會獎/命運獎各50%
-  const normal = [];
-  if(remaining['機會獎']) normal.push('機會獎');
-  if(remaining['命運獎']) normal.push('命運獎');
-  return normal[Math.floor(Math.random()*normal.length)];
 }
 
 // --- 畫布設定 ---
@@ -121,7 +98,7 @@ function initMask(){
   maskCtx.fillRect(0,0,maskCanvas.width,maskCanvas.height);
 }
 
-// --- 刮刮卡邏輯 ---
+// --- 刮刮卡 ---
 let isDrawing=false;
 function getPos(e){
   const rect=maskCanvas.getBoundingClientRect();
@@ -151,18 +128,6 @@ function showResult(prizeText){
     <div class="notice">${prizeText==='已抽過'?'':'請洽服務人員兌獎'}</div>`;
   resultDiv.style.display='block';
   maskCanvas.style.pointerEvents='none';
-  if(prizeText!=='已抽過') sendData(prizeText);
-}
-
-// --- 送資料到 GAS ---
-function sendData(prizeText){
-  if(hasSentData) return;
-  hasSentData=true;
-  const params = new URLSearchParams({action:'record_win', prize:prizeText, deviceBrand, deviceModel, userId});
-  fetch(`${GAS_URL}`,{method:'POST',body:params})
-    .then(res=>res.text())
-    .then(data=>console.log('資料已送出',data))
-    .catch(e=>console.error(e));
 }
 
 // --- 綁定事件 ---
